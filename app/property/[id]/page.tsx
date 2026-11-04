@@ -7,6 +7,8 @@ import PropertyDetailsClient from "@/components/property-details-client"
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://jayalisting.com"
 
+export const dynamic = "force-dynamic"
+
 interface PageProps {
   params: Promise<{ id: string }>
 }

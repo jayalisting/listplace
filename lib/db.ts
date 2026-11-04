@@ -2,28 +2,58 @@ import { Pool } from "pg"
 import { LUXURY_PROPERTIES, LuxuryProperty } from "./luxury-properties"
 import { ImageSeoData, ImageSeoSettings, DEFAULT_IMAGE_SEO_SETTINGS, createDefaultImageSeo } from "./image-seo"
 
-// Global pool instance to prevent connection exhaustion in Next.js hot reload
+// Global pool instance to prevent connection exhaustion in Next.js hot reload / serverless
 const globalForPg = globalThis as unknown as {
   pgPool: Pool | undefined
 }
 
-export const pool =
-  globalForPg.pgPool ??
-  new Pool({
-    connectionString:
-      process.env.DATABASE_URL || "postgres://nikhilkotian@localhost:5432/grolow_db",
-    ssl:
-      (process.env.DATABASE_URL && !process.env.DATABASE_URL.includes("localhost") && !process.env.DATABASE_URL.includes("127.0.0.1") && process.env.NODE_ENV === "production")
-        ? { rejectUnauthorized: false }
-        : false,
+function getPool(): Pool {
+  if (globalForPg.pgPool) {
+    return globalForPg.pgPool
+  }
+
+  const isProduction = process.env.NODE_ENV === "production"
+  const databaseUrl = process.env.DATABASE_URL
+
+  // Strictly prevent fallback to localhost / 127.0.0.1 in production
+  if (isProduction && !databaseUrl) {
+    throw new Error(
+      "[Database Error] DATABASE_URL environment variable is missing in production. Please set DATABASE_URL in your Vercel project settings."
+    )
+  }
+
+  // In development, fall back to local database if DATABASE_URL is not set
+  const connectionString = databaseUrl || "postgres://nikhilkotian@localhost:5432/grolow_db"
+
+  // Check if target is a local machine
+  const isLocalHost = connectionString.includes("localhost") || connectionString.includes("127.0.0.1")
+
+  // Neon Postgres and all remote cloud hosts require SSL. Never ssl: false for remote hosts.
+  const ssl = isLocalHost ? false : { rejectUnauthorized: false }
+
+  const newPool = new Pool({
+    connectionString,
+    ssl,
     max: 10,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 5000,
   })
 
-if (process.env.NODE_ENV !== "production") {
-  globalForPg.pgPool = pool
+  globalForPg.pgPool = newPool
+  return newPool
 }
+
+// Lazy-initialized Pool proxy so importing lib/db does not connect or throw at build time
+export const pool = new Proxy({} as Pool, {
+  get(_target, prop) {
+    const realPool = getPool()
+    const value = (realPool as any)[prop]
+    if (typeof value === "function") {
+      return value.bind(realPool)
+    }
+    return value
+  },
+})
 
 let isInitialized = false
 

@@ -11,7 +11,12 @@ export const revalidate = 3600 // Cache for 1 hour, auto-invalidates on update
 export async function GET() {
   try {
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://jayalisting.com"
-    const registeredImages = await getAllImageSeoRecords()
+    let registeredImages: any[] = []
+    try {
+      registeredImages = await getAllImageSeoRecords()
+    } catch (e) {
+      console.warn("Notice querying image SEO records for image sitemap:", e)
+    }
 
     // Map by image URL
     const imageMap = new Map<string, any>()

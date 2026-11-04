@@ -2,11 +2,15 @@ import { MetadataRoute } from 'next'
 import { pool } from '@/lib/db'
 import { LUXURY_PROPERTIES } from '@/lib/luxury-properties'
 
+// Ensure sitemap is not statically evaluated during next build without DB
+export const dynamic = 'force-dynamic'
+export const revalidate = 3600
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://jayalisting.com'
   const now = new Date()
 
-  // 1. Core User-Side Pages (Home + 4 Category Listing Pages)
+  // 1. Core User-Side Static Routes
   const coreRoutes: MetadataRoute.Sitemap = [
     {
       url: baseUrl,
@@ -40,7 +44,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ]
 
-  // 2. Dynamic Published Property Pages
+  // 2. Dynamic Published Property Pages (Safely Wrapped in try/catch)
   let propertyRoutes: MetadataRoute.Sitemap = []
 
   try {
@@ -51,27 +55,28 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
        ORDER BY updated_at DESC`
     )
 
-    if (res.rows && res.rows.length > 0) {
+    if (res?.rows && res.rows.length > 0) {
       propertyRoutes = res.rows.map((row) => ({
         url: `${baseUrl}/property/${row.id}`,
         lastModified: row.updated_at ? new Date(row.updated_at) : new Date(row.created_at || Date.now()),
-        changeFrequency: 'weekly',
+        changeFrequency: 'weekly' as const,
         priority: 0.85,
       }))
     }
   } catch (err) {
-    // Database fallback to static properties
-  }
-
-  if (propertyRoutes.length === 0) {
-    propertyRoutes = LUXURY_PROPERTIES.filter(
-      (p) => !p.visibility || p.visibility === 'public'
-    ).map((p) => ({
-      url: `${baseUrl}/property/${p.id}`,
-      lastModified: now,
-      changeFrequency: 'weekly',
-      priority: 0.85,
-    }))
+    // If database is offline or not configured, fall back to bundled static properties
+    try {
+      propertyRoutes = LUXURY_PROPERTIES.filter(
+        (p) => !p.visibility || p.visibility === 'public'
+      ).map((p) => ({
+        url: `${baseUrl}/property/${p.id}`,
+        lastModified: now,
+        changeFrequency: 'weekly' as const,
+        priority: 0.85,
+      }))
+    } catch {
+      // If even that fails, propertyRoutes stays empty and only coreRoutes are returned
+    }
   }
 
   return [...coreRoutes, ...propertyRoutes]
