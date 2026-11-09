@@ -17,8 +17,18 @@ export async function GET(req: NextRequest) {
     const category = searchParams.get("category") || undefined
     const includePrivate = searchParams.get("includePrivate") === "true"
     const format = searchParams.get("format") // "ai" | "raw" | undefined
+    const cursor = searchParams.get("cursor") || undefined
+    const limit = searchParams.get("limit") ? parseInt(searchParams.get("limit")!, 10) : undefined
+    const offset = searchParams.get("offset") ? parseInt(searchParams.get("offset")!, 10) : undefined
 
-    const properties = await getDbProperties(category, includePrivate)
+    // Full columns only required for AI/SEO markdown schemas or explicit admin full inspection
+    const isFullRequested = format === "ai" || format === "seo" || searchParams.get("full") === "true"
+    const properties = await getDbProperties(category, includePrivate, {
+      full: isFullRequested,
+      cursor,
+      limit,
+      offset,
+    })
 
     // If third-party AI or search portal requests public discovery format
     if (format === "ai" || format === "seo") {

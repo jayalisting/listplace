@@ -31,3 +31,4 @@ ALTER TABLE vip_tour_bookings_archive RESET (toast_tuple_target);
 -- Drop cold storage columns
 ALTER TABLE image_seo_records DROP COLUMN IF EXISTS cold_payload;
 ALTER TABLE vip_tour_bookings_archive DROP COLUMN IF EXISTS notes_compressed;
+

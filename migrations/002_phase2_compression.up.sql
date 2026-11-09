@@ -31,3 +31,4 @@ ALTER TABLE vip_tour_bookings_archive SET (toast_tuple_target = 512);
 -- Layer B: Compact BYTEA columns for cold compressed payloads
 ALTER TABLE image_seo_records ADD COLUMN IF NOT EXISTS cold_payload BYTEA;
 ALTER TABLE vip_tour_bookings_archive ADD COLUMN IF NOT EXISTS notes_compressed BYTEA;
+

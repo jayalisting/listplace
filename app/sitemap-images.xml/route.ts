@@ -30,7 +30,7 @@ export async function GET() {
     const propImagesByPage = new Map<string, string[]>()
     try {
       const res = await pool.query(
-        "SELECT id, images, visibility FROM properties WHERE visibility IS NULL OR visibility != 'private'"
+        "SELECT id, images FROM properties WHERE visibility IS NULL OR visibility != 'private'"
       )
       for (const row of res.rows) {
         const pageUrl = `${baseUrl}/property/${row.id}`

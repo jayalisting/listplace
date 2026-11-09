@@ -49,7 +49,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   try {
     const res = await pool.query(
-      `SELECT id, updated_at, created_at, status, visibility 
+      `SELECT id, updated_at, created_at 
        FROM properties 
        WHERE (visibility IS NULL OR visibility = 'public' OR visibility = 'published') 
        ORDER BY updated_at DESC`
