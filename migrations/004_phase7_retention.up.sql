@@ -35,3 +35,4 @@ CREATE INDEX IF NOT EXISTS idx_vip_bookings_archive_property ON vip_tour_booking
 -- 5. Index for fast identification and cleanup of expired/revoked VIP tokens
 CREATE INDEX IF NOT EXISTS idx_vip_tokens_retention 
 ON vip_share_tokens(status, view_count, max_views, last_viewed_at, created_at);
+

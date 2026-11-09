@@ -58,12 +58,13 @@ import { LuxuryProperty } from "@/lib/luxury-properties"
 import ImageUploadManager from "@/components/image-upload-manager"
 import PropertyShareModal from "@/components/property-share-modal"
 import AdminImageSeoManager from "@/components/admin-image-seo-manager"
+import AdminDatabaseMonitor from "@/components/admin-database-monitor"
 
 export default function AdminPage() {
   const [properties, setProperties] = useState<LuxuryProperty[]>([])
   const [loading, setLoading] = useState(true)
   const [dbConnected, setDbConnected] = useState(false)
-  const [mainAdminTab, setMainAdminTab] = useState<"estates" | "vip_appointments" | "image_seo">("estates")
+  const [mainAdminTab, setMainAdminTab] = useState<"estates" | "vip_appointments" | "image_seo" | "database_monitor">("estates")
   const [vipBookings, setVipBookings] = useState<any[]>([])
   const [loadingBookings, setLoadingBookings] = useState(false)
   const [updatingBookingId, setUpdatingBookingId] = useState<number | null>(null)
@@ -1123,6 +1124,18 @@ export default function AdminPage() {
             <Sparkles className="w-4 h-4 text-amber-500" />
             <span>📸 Image SEO & AI Search</span>
           </button>
+
+          <button
+            onClick={() => setMainAdminTab("database_monitor")}
+            className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold flex items-center space-x-2 transition-all ${
+              mainAdminTab === "database_monitor"
+                ? "bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white shadow-md shadow-emerald-600/20 font-black"
+                : "bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-emerald-50"
+            }`}
+          >
+            <Database className="w-4 h-4 text-emerald-500" />
+            <span>⚡ Database & Cost Monitor</span>
+          </button>
         </div>
 
         {mainAdminTab === "estates" ? (
@@ -1788,8 +1801,10 @@ export default function AdminPage() {
           </div>
         )}
       </div>
-    ) : (
+    ) : mainAdminTab === "image_seo" ? (
       <AdminImageSeoManager />
+    ) : (
+      <AdminDatabaseMonitor />
     )}
       </main>
 
