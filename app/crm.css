@@ -1,0 +1,619 @@
+/* Scoped styles for Unified Real Estate CRM Workspace */
+.crm-scope {
+  --crm-bg: #f8fafc;
+  --crm-card: #ffffff;
+  --crm-text: #0f172a;
+  --crm-muted: #64748b;
+  --crm-primary: #0f6b55;
+  --crm-primary-light: #e6f3ee;
+  --crm-border: #e2e8f0;
+  --crm-danger: #ef4444;
+  --crm-danger-light: #fef2f2;
+}
+
+.dark .crm-scope {
+  --crm-bg: #0b0f17;
+  --crm-card: #131b26;
+  --crm-text: #f1f5f9;
+  --crm-muted: #94a3b8;
+  --crm-primary: #2dd4bf;
+  --crm-primary-light: #134e4a;
+  --crm-border: #1e293b;
+  --crm-danger: #f87171;
+  --crm-danger-light: #450a0a;
+}
+
+.crm-scope {
+  background: var(--crm-bg);
+  color: var(--crm-text);
+  border-radius: 24px;
+}
+
+.crm-scope .card {
+  background: var(--crm-card);
+  border: 1px solid var(--crm-border);
+  border-radius: 16px;
+  padding: 18px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.crm-scope header {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 18px;
+  background: var(--crm-card);
+  border: 1px solid var(--crm-border);
+  border-radius: 20px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
+.crm-scope nav {
+  display: flex;
+  gap: 4px;
+}
+
+.crm-scope nav a {
+  padding: 8px 14px;
+  border-radius: 12px;
+  color: var(--crm-text);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid transparent;
+}
+
+.crm-scope nav a:hover {
+  background: var(--crm-border);
+}
+
+.crm-scope nav a.on {
+  background: var(--crm-primary);
+  color: #ffffff;
+}
+
+.crm-scope input,
+.crm-scope select,
+.crm-scope textarea {
+  font: inherit;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1.5px solid var(--crm-border);
+  background: var(--crm-card);
+  color: var(--crm-text);
+  transition: all 0.15s ease;
+}
+
+.crm-scope input:focus,
+.crm-scope select:focus,
+.crm-scope textarea:focus {
+  outline: none;
+  border-color: var(--crm-primary);
+  box-shadow: 0 0 0 3px rgba(15, 107, 85, 0.15);
+}
+
+.crm-scope button {
+  font: inherit;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--crm-border);
+  background: var(--crm-card);
+  color: var(--crm-text);
+  cursor: pointer;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s;
+}
+
+.crm-scope button.p {
+  background: var(--crm-primary);
+  color: #fff;
+  border: 1px solid var(--crm-primary);
+  font-weight: 700;
+}
+
+.crm-scope button.p:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+.crm-scope button.x {
+  color: var(--crm-danger);
+  border: 0;
+  background: none;
+  padding: 4px 8px;
+  font-size: 16px;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.crm-scope button.x:hover {
+  background: var(--crm-danger-light);
+}
+
+.crm-scope .btn-sm {
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--crm-border);
+  background: var(--crm-card);
+  color: var(--crm-text);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.crm-scope .btn-wa {
+  background: #25d366;
+  color: #ffffff !important;
+  border-color: #25d366;
+}
+
+.crm-scope .top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.crm-scope .sec-hd {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.crm-scope .row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--crm-border);
+  gap: 10px;
+}
+
+.crm-scope .row:last-child {
+  border-bottom: none;
+}
+
+.crm-scope .prop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 14px;
+}
+
+.crm-scope .prop-card {
+  background: var(--crm-card);
+  border: 1px solid var(--crm-border);
+  border-radius: 16px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.crm-scope .prop-card:hover {
+  border-color: var(--crm-primary);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.crm-scope .prop-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.crm-scope .prop-field {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  padding: 4px 0;
+  border-bottom: 1px dashed var(--crm-border);
+}
+
+.crm-scope .prop-label {
+  color: var(--crm-muted);
+}
+
+.crm-scope .prop-card-footer {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--crm-border);
+}
+
+.crm-scope .prop-alert {
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  margin-top: 10px;
+}
+
+.dark .crm-scope .prop-alert {
+  background: #451a03;
+  color: #fde68a;
+  border-color: #78350f;
+}
+
+.crm-scope .star-btn,
+.crm-scope .star-btn-sm {
+  background: none;
+  border: 0;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.crm-scope .type-badge {
+  background: rgba(99, 102, 241, 0.1);
+  color: #6366f1;
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.crm-scope .view-toggle {
+  display: flex;
+  border: 1px solid var(--crm-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.crm-scope .view-toggle button {
+  border: 0;
+  background: none;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  border-radius: 0;
+}
+
+.crm-scope .view-toggle button.on {
+  background: var(--crm-primary);
+  color: #fff;
+}
+
+.crm-scope .kanban-board {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  padding-bottom: 14px;
+}
+
+.crm-scope .kanban-col {
+  background: var(--crm-card);
+  border: 1px solid var(--crm-border);
+  border-radius: 16px;
+  padding: 12px;
+  min-width: 280px;
+  flex: 1;
+}
+
+.crm-scope .kanban-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 8px;
+  margin-bottom: 10px;
+  border-bottom: 2px solid;
+}
+
+.crm-scope .kanban-card {
+  background: var(--crm-bg);
+  border: 1px solid var(--crm-border);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.crm-scope .kanban-card:hover {
+  border-color: var(--crm-primary);
+  transform: translateY(-1px);
+}
+
+.crm-scope .stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.crm-scope .stat-card {
+  background: var(--crm-card);
+  border: 1px solid var(--crm-border);
+  border-radius: 16px;
+  padding: 14px;
+  text-align: center;
+}
+
+.crm-scope .stat-num {
+  font-size: 24px;
+  font-weight: 900;
+  color: var(--crm-text);
+}
+
+.crm-scope .stat-label {
+  font-size: 11px;
+  color: var(--crm-muted);
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+.crm-scope .filter-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.crm-scope .filter-chip {
+  padding: 6px 14px;
+  border-radius: 99px;
+  border: 1px solid var(--crm-border);
+  background: var(--crm-card);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.crm-scope .filter-chip.active {
+  background: var(--crm-primary);
+  color: #fff;
+  border-color: var(--crm-primary);
+}
+
+.crm-scope .pill-btn {
+  background: var(--crm-card);
+  border: 1px solid var(--crm-border);
+  border-radius: 99px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+}
+
+.crm-scope .work-shortcuts {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.crm-scope .work-btn {
+  background: var(--crm-card);
+  border: 1.5px solid var(--crm-border);
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s;
+}
+
+.crm-scope .work-btn:hover {
+  border-color: var(--crm-primary);
+  background: rgba(15, 107, 85, 0.05);
+}
+
+.crm-scope .task-box {
+  background: var(--crm-card);
+  border: 1px solid var(--crm-border);
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 10px;
+}
+
+.crm-scope .time-pill {
+  background: rgba(15, 107, 85, 0.1);
+  color: var(--crm-primary);
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.crm-scope .time-pill.overdue {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.crm-scope .task-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.crm-scope .btn-sm-action {
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid var(--crm-border);
+  background: var(--crm-card);
+  cursor: pointer;
+}
+
+.crm-scope .lead-card {
+  background: var(--crm-card);
+  border: 1px solid var(--crm-border);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+}
+
+.crm-scope .ov {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.crm-scope .dlg {
+  background: var(--crm-card);
+  border: 1px solid var(--crm-border);
+  border-radius: 24px;
+  padding: 24px;
+  max-width: 580px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+}
+
+.crm-scope .log-bar {
+  background: var(--crm-bg);
+  border: 1.5px solid var(--crm-primary);
+  border-radius: 16px;
+  padding: 14px;
+  margin-bottom: 16px;
+}
+
+.crm-scope .chip {
+  background: var(--crm-card);
+  border: 1px solid var(--crm-border);
+  border-radius: 99px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.crm-scope .chip.active {
+  background: var(--crm-primary);
+  color: #fff;
+  border-color: var(--crm-primary);
+}
+
+.crm-scope .pill {
+  background: var(--crm-bg);
+  padding: 3px 8px;
+  border-radius: 99px;
+  font-size: 11px;
+  border: 1px solid var(--crm-border);
+  font-weight: 600;
+}
+
+.crm-scope .mono {
+  font-family: monospace;
+  font-size: 12px;
+}
+
+.crm-scope .crm-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 12px;
+}
+
+.crm-scope .crm-table th {
+  padding: 10px 12px;
+  background: var(--crm-bg);
+  border-bottom: 1.5px solid var(--crm-border);
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 10px;
+}
+
+.crm-scope .crm-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--crm-border);
+}
+
+.crm-scope .detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+  font-size: 13px;
+}
+
+.crm-scope .detail-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--crm-border);
+}
+
+.crm-scope .alert-bar {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-weight: 700;
+  font-size: 12px;
+  margin-bottom: 14px;
+}
+
+.crm-scope .g {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.crm-scope .g img {
+  width: 100%;
+  height: 110px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--crm-border);
+}
+
+.crm-scope .fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  font-size: 26px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.crm-scope .m {
+  color: var(--crm-muted);
+}
+
+.crm-scope .red {
+  color: var(--crm-danger);
+}

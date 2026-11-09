@@ -45,6 +45,7 @@ import {
   Star,
   ArrowUp,
   ArrowDown,
+  Briefcase,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -59,12 +60,13 @@ import ImageUploadManager from "@/components/image-upload-manager"
 import PropertyShareModal from "@/components/property-share-modal"
 import AdminImageSeoManager from "@/components/admin-image-seo-manager"
 import AdminDatabaseMonitor from "@/components/admin-database-monitor"
+import CrmWorkspace from "@/components/crm-workspace"
 
 export default function AdminPage() {
   const [properties, setProperties] = useState<LuxuryProperty[]>([])
   const [loading, setLoading] = useState(true)
   const [dbConnected, setDbConnected] = useState(false)
-  const [mainAdminTab, setMainAdminTab] = useState<"estates" | "vip_appointments" | "image_seo" | "database_monitor">("estates")
+  const [mainAdminTab, setMainAdminTab] = useState<"estates" | "vip_appointments" | "image_seo" | "database_monitor" | "crm">("estates")
   const [vipBookings, setVipBookings] = useState<any[]>([])
   const [loadingBookings, setLoadingBookings] = useState(false)
   const [updatingBookingId, setUpdatingBookingId] = useState<number | null>(null)
@@ -1136,6 +1138,18 @@ export default function AdminPage() {
             <Database className="w-4 h-4 text-emerald-500" />
             <span>⚡ Database & Cost Monitor</span>
           </button>
+
+          <button
+            onClick={() => setMainAdminTab("crm")}
+            className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold flex items-center space-x-2 transition-all ${
+              mainAdminTab === "crm"
+                ? "bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 text-white shadow-md shadow-indigo-600/20 font-black"
+                : "bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-indigo-50"
+            }`}
+          >
+            <Briefcase className="w-4 h-4 text-indigo-400" />
+            <span>💼 Real Estate CRM</span>
+          </button>
         </div>
 
         {mainAdminTab === "estates" ? (
@@ -1803,8 +1817,10 @@ export default function AdminPage() {
       </div>
     ) : mainAdminTab === "image_seo" ? (
       <AdminImageSeoManager />
-    ) : (
+    ) : mainAdminTab === "database_monitor" ? (
       <AdminDatabaseMonitor />
+    ) : (
+      <CrmWorkspace />
     )}
       </main>
 
