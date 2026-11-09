@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { revalidatePath, revalidateTag } from "next/cache"
 import { updateDbVipTourBookingStatus, deleteDbVipTourBooking } from "@/lib/db"
 import { verifyAdminRequest } from "@/lib/admin-auth"
 
@@ -9,6 +10,15 @@ const NO_CACHE_HEADERS = {
   "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0, proxy-revalidate",
   Pragma: "no-cache",
   Expires: "0",
+}
+
+function triggerTourRevalidation() {
+  try {
+    revalidatePath("/admin")
+    revalidateTag("vip-tours")
+  } catch (e) {
+    console.warn("Notice: on-demand revalidation on tour update:", e)
+  }
 }
 
 /**
@@ -46,6 +56,8 @@ export async function PATCH(
       )
     }
 
+    triggerTourRevalidation()
+
     return NextResponse.json(
       {
         success: true,
@@ -80,6 +92,10 @@ export async function DELETE(
 
     const { id } = await params
     const deleted = await deleteDbVipTourBooking(id)
+
+    if (deleted) {
+      triggerTourRevalidation()
+    }
 
     return NextResponse.json(
       {

@@ -2,8 +2,7 @@ import { MetadataRoute } from 'next'
 import { pool } from '@/lib/db'
 import { LUXURY_PROPERTIES } from '@/lib/luxury-properties'
 
-// Ensure sitemap is not statically evaluated during next build without DB
-export const dynamic = 'force-dynamic'
+// ISR: Cache sitemap on Edge with 1-hour background revalidation
 export const revalidate = 3600
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

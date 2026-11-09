@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import {
   Building,
   Home,
@@ -69,6 +69,9 @@ export default function AdminPage() {
   const [updatingBookingId, setUpdatingBookingId] = useState<number | null>(null)
   const [activeTab, setActiveTab] = useState<"all" | "residential" | "commercial" | "industrial" | "agriculture">("all")
   const [searchFilter, setSearchFilter] = useState("")
+  const [currentPage, setCurrentPage] = useState(1)
+  const PAGE_SIZE = 10
+  const lastRefreshTime = useRef(Date.now())
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [actionMessage, setActionMessage] = useState<string | null>(null)
@@ -627,7 +630,37 @@ export default function AdminPage() {
       })
     fetchProperties()
     fetchVipBookings()
+
+    // Revalidate-on-focus: debounced to 30s so returning to the tab checks for new bookings/changes
+    const onFocus = () => {
+      const now = Date.now()
+      if (now - lastRefreshTime.current > 30000) {
+        lastRefreshTime.current = now
+        fetchProperties()
+        fetchVipBookings()
+      }
+    }
+    window.addEventListener("focus", onFocus)
+
+    // Gentle 45-second background interval, running only when the tab is visible
+    const interval = setInterval(() => {
+      if (!document.hidden) {
+        lastRefreshTime.current = Date.now()
+        fetchProperties()
+        fetchVipBookings()
+      }
+    }, 45000)
+
+    return () => {
+      window.removeEventListener("focus", onFocus)
+      clearInterval(interval)
+    }
   }, [])
+
+  // Reset pagination when category or search filter changes
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [activeTab, searchFilter])
 
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -761,6 +794,10 @@ export default function AdminPage() {
     }
     return true
   })
+
+  // Pagination for Dashboard Listings
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1
+  const paginatedListings = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
 
   // Category counts
   const residentialCount = properties.filter((p) => p.category === "residential").length
@@ -1169,7 +1206,7 @@ export default function AdminPage() {
           </div>
 
           <div className="divide-y divide-gray-100 dark:divide-gray-800">
-            {filtered.map((item) => (
+            {paginatedListings.map((item) => (
               <div
                 key={item.id}
                 className="p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:bg-rose-50/20 dark:hover:bg-rose-950/10 transition-colors"
@@ -1181,6 +1218,7 @@ export default function AdminPage() {
                       src={item.images[0] || "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=400&q=80"}
                       alt={item.title}
                       fill
+                      loading="lazy"
                       className="object-cover"
                       sizes="96px"
                     />
@@ -1503,6 +1541,38 @@ export default function AdminPage() {
               </div>
             )}
           </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="p-4 sm:p-5 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between flex-wrap gap-3 text-xs bg-gray-50/50 dark:bg-gray-800/30">
+              <span className="text-gray-500 font-medium">
+                Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filtered.length)} of {filtered.length} estates
+              </span>
+              <div className="flex items-center space-x-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  className="h-8 px-3 rounded-lg text-xs font-semibold"
+                >
+                  Previous
+                </Button>
+                <span className="px-2 font-bold text-gray-700 dark:text-gray-300">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  className="h-8 px-3 rounded-lg text-xs font-semibold"
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </>
     ) : mainAdminTab === "vip_appointments" ? (

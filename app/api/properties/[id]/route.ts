@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
+import { revalidatePath, revalidateTag } from "next/cache"
+import crypto from "crypto"
 import { getDbPropertyById, deleteDbProperty, updateDbPropertyAmenities, updateDbProperty } from "@/lib/db"
 import { verifyAdminRequest } from "@/lib/admin-auth"
 
@@ -9,6 +11,21 @@ const NO_CACHE_HEADERS = {
   "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0, proxy-revalidate",
   Pragma: "no-cache",
   Expires: "0",
+}
+
+function triggerPropertyRevalidation(id: string) {
+  try {
+    revalidatePath("/")
+    revalidatePath("/residential")
+    revalidatePath("/commercial")
+    revalidatePath("/industrial")
+    revalidatePath("/agriculture")
+    revalidatePath(`/property/${id}`)
+    revalidatePath("/sitemap.xml")
+    revalidateTag("properties")
+  } catch (e) {
+    console.warn("Notice: on-demand revalidation:", e)
+  }
 }
 
 export async function GET(
@@ -26,12 +43,33 @@ export async function GET(
       )
     }
 
+    const isPrivate = property.visibility === "private" || property.visibility === "draft"
+    const etag = `W/"${crypto.createHash("md5").update(id + ":" + property.title + ":" + (property.price || "")).digest("hex").slice(0, 16)}"`
+
+    const ifNoneMatch = req.headers.get("if-none-match")
+    if (ifNoneMatch && ifNoneMatch === etag) {
+      return new NextResponse(null, {
+        status: 304,
+        headers: {
+          ETag: etag,
+          "Cache-Control": isPrivate ? "no-store" : "public, s-maxage=60, stale-while-revalidate=300",
+        },
+      })
+    }
+
+    const headers: Record<string, string> = isPrivate
+      ? NO_CACHE_HEADERS
+      : {
+          ETag: etag,
+          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+        }
+
     return NextResponse.json(
       {
         success: true,
         data: property,
       },
-      { headers: NO_CACHE_HEADERS }
+      { headers }
     )
   } catch (error: any) {
     return NextResponse.json(
@@ -64,6 +102,9 @@ export async function PATCH(
           { status: 404, headers: NO_CACHE_HEADERS }
         )
       }
+
+      triggerPropertyRevalidation(id)
+
       return NextResponse.json(
         {
           success: true,
@@ -82,6 +123,8 @@ export async function PATCH(
         { status: 404, headers: NO_CACHE_HEADERS }
       )
     }
+
+    triggerPropertyRevalidation(id)
 
     // When admin makes a property public or updates a public property, notify IndexNow immediately!
     if (updated && (updated.visibility === "public" || updated.visibility === "published")) {
@@ -132,6 +175,11 @@ export async function DELETE(
 
     const { id } = await params
     const deleted = await deleteDbProperty(id)
+
+    if (deleted) {
+      triggerPropertyRevalidation(id)
+    }
+
     return NextResponse.json(
       {
         success: true,

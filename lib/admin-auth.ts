@@ -1,11 +1,16 @@
 import crypto from "crypto"
-import { NextRequest } from "next/server"
+import type { NextRequest } from "next/server"
 
 const SALT = process.env.ADMIN_PASSWORD_SALT || "grolow_jaya_luxury_2026"
 // Salted SHA-256 hash
 const STORED_HASH =
   process.env.ADMIN_PASSWORD_HASH ||
   "e6bf92fba5a7991a2e2cb9ae080e740131649c197268f8d8eb4ec1077d20e41f"
+
+// PBKDF2 key derivation parameters (standard 100,000 iterations for secure brute-force defense)
+const PBKDF2_ITERATIONS = 100000
+const PBKDF2_KEYLEN = 64
+const PBKDF2_DIGEST = "sha512"
 
 const SESSION_SECRET =
   process.env.ADMIN_SESSION_SECRET ||
@@ -14,12 +19,26 @@ const SESSION_SECRET =
 const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
 
 /**
- * Validates candidate password against secure salted SHA-256 hash using timing-safe comparison.
- * The plaintext password is NEVER stored in any code or database file.
+ * Validates candidate password at login using secure key derivation.
+ * PBKDF2 runs only ONCE at login to avoid CPU strain on per-request checks.
+ * Once verified, a signed HMAC session cookie is issued for sub-millisecond per-request verification.
  */
 export function verifyAdminPassword(candidate: string): boolean {
   if (!candidate || typeof candidate !== "string") return false
 
+  // 1. If PBKDF2 hash is configured in environment, verify against 100k iterations
+  if (process.env.ADMIN_PBKDF2_HASH) {
+    try {
+      const derivedKey = crypto
+        .pbkdf2Sync(candidate, SALT, PBKDF2_ITERATIONS, PBKDF2_KEYLEN, PBKDF2_DIGEST)
+        .toString("hex")
+      const a = Buffer.from(derivedKey, "hex")
+      const b = Buffer.from(process.env.ADMIN_PBKDF2_HASH, "hex")
+      if (a.length === b.length && crypto.timingSafeEqual(a, b)) return true
+    } catch {}
+  }
+
+  // 2. Verified fallback against established salted SHA-256 hash
   const candidateHash = crypto
     .createHash("sha256")
     .update(candidate + SALT)

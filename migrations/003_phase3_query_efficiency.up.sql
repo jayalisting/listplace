@@ -21,3 +21,4 @@ WHERE (visibility IS NULL OR visibility = 'public' OR visibility = 'published');
 
 -- 3. Cleanup unused redundant indexes
 DROP INDEX IF EXISTS idx_vip_tokens_lookup;
+

@@ -1,16 +1,36 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { fetchPropertyById } from "@/lib/get-property"
+import { getDbProperties } from "@/lib/db"
+import { LUXURY_PROPERTIES } from "@/lib/luxury-properties"
 import { toPublicListing } from "@/lib/public-listing"
 import { generatePropertyJsonLd } from "@/lib/json-ld"
 import PropertyDetailsClient from "@/components/property-details-client"
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://jayalisting.com"
 
-export const dynamic = "force-dynamic"
+// ISR: Cache pre-rendered property pages on Edge with 24-hour background revalidation
+// On-demand revalidation is triggered instantly upon admin updates
+export const revalidate = 86400
 
 interface PageProps {
   params: Promise<{ id: string }>
+}
+
+/**
+ * Pre-generate static paths for public listings.
+ * Safely falls back to static bundled properties if the database is offline or during build.
+ */
+export async function generateStaticParams(): Promise<{ id: string }[]> {
+  try {
+    const properties = await getDbProperties("all", false, { limit: 50 })
+    if (properties && properties.length > 0) {
+      return properties.map((p) => ({ id: String(p.id) }))
+    }
+  } catch {
+    // Fall back to bundled static properties
+  }
+  return LUXURY_PROPERTIES.map((p) => ({ id: String(p.id) }))
 }
 
 /**

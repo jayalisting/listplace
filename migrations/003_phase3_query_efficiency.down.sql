@@ -7,3 +7,4 @@ SET search_path TO public, neon_auth;
 
 DROP INDEX IF EXISTS idx_properties_public_category_cover;
 DROP INDEX IF EXISTS idx_properties_sitemap;
+
