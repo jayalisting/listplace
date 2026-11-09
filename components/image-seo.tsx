@@ -58,12 +58,29 @@ export default function SeoImage({
   const fetchPriorityVal = isHighPriority ? "high" : "auto"
   const transcript = seoData?.transcript
 
+  const isUpload = src.includes("estate-") || src.startsWith("/uploads/")
+  const avifSrc = src.replace(/\.(webp|jpg|jpeg|png)$/i, ".avif")
+  const webpSrc = src.replace(/\.(avif|jpg|jpeg|png)$/i, ".webp")
+
   const imageElement = (
     <picture>
-      {/* If WebP format available */}
-      {src.endsWith(".webp") && (
-        <source srcSet={src} type="image/webp" />
+      {/* 1. Ultra-dense modern AVIF format with pre-generated responsive widths */}
+      {isUpload && (
+        <source
+          srcSet={`${avifSrc.replace(/\.avif$/, "-1600w.avif")} 1600w, ${avifSrc.replace(/\.avif$/, "-1080w.avif")} 1080w, ${avifSrc.replace(/\.avif$/, "-640w.avif")} 640w, ${avifSrc}`}
+          type="image/avif"
+          sizes={sizes}
+        />
       )}
+      {/* 2. Standard modern WebP format with pre-generated responsive widths */}
+      {isUpload && (
+        <source
+          srcSet={`${webpSrc.replace(/\.webp$/, "-1600w.webp")} 1600w, ${webpSrc.replace(/\.webp$/, "-1080w.webp")} 1080w, ${webpSrc.replace(/\.webp$/, "-640w.webp")} 640w, ${webpSrc}`}
+          type="image/webp"
+          sizes={sizes}
+        />
+      )}
+      {/* 3. Progressive JPEG / Original format fallback */}
       <img
         src={src}
         alt={computedAlt}

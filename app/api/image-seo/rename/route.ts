@@ -38,6 +38,31 @@ export async function POST(req: NextRequest) {
       if (existsSync(oldFilePath)) {
         await renameAsync(oldFilePath, newFilePath)
       }
+
+      // Also rename associated responsive/format variants if present
+      const oldBase = oldFileName.replace(/\.[^/.]+$/, "")
+      const newBase = cleanNewFileName.replace(/\.[^/.]+$/, "")
+      for (const variantExt of [
+        ".avif",
+        ".jpg",
+        ".webp",
+        "-1600w.webp",
+        "-1600w.avif",
+        "-1600w.jpg",
+        "-1080w.webp",
+        "-1080w.avif",
+        "-1080w.jpg",
+        "-640w.webp",
+        "-640w.avif",
+        "-640w.jpg",
+      ]) {
+        const oldV = path.join(uploadsDir, `${oldBase}${variantExt}`)
+        const newV = path.join(uploadsDir, `${newBase}${variantExt}`)
+        if (existsSync(oldV) && !existsSync(newV)) {
+          await renameAsync(oldV, newV).catch(() => {})
+        }
+      }
+
       newUrl = `/uploads/${cleanNewFileName}`
     } else {
       // Remote or external URL — track logical SEO file name

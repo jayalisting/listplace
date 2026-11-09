@@ -13,10 +13,25 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   images: {
-    unoptimized: true,
+    // Phase 5 Image Tuning:
+    // Limit deviceSizes, imageSizes, and qualities to prevent expensive combinatorial on-demand transforms
+    deviceSizes: [640, 1080, 1600],
+    imageSizes: [96, 256, 384],
+    qualities: [75, 80],
+    minimumCacheTTL: 31536000, // 1 year immutable Edge cache
+    formats: ["image/avif", "image/webp"],
   },
   async headers() {
     return [
+      {
+        source: "/uploads/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
       {
         source: "/llms.txt",
         headers: [

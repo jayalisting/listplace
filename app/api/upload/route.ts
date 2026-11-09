@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
-import { writeFile, mkdir } from "fs/promises"
-import path from "path"
-import { existsSync } from "fs"
-import crypto from "crypto"
+import { processImageUpload } from "@/lib/image-processing"
+import { storeFile } from "@/lib/storage"
 
 export const dynamic = "force-dynamic"
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5 MB hard limit
+const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10 MB limit
 const ALLOWED_MIME_TYPES = [
   "image/webp",
   "image/jpeg",
@@ -33,7 +31,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: `Image exceeds maximum allowed size of 5 MB. Current: ${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+          error: `Image exceeds maximum allowed size of 10 MB. Current: ${(file.size / (1024 * 1024)).toFixed(2)} MB`,
         },
         { status: 400 }
       )
@@ -50,40 +48,41 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // 3. Ensure public/uploads directory exists
-    const uploadsDir = path.join(process.cwd(), "public", "uploads")
-    if (!existsSync(uploadsDir)) {
-      await mkdir(uploadsDir, { recursive: true })
-    }
-
-    // 4. Content-hash deduplication: Identical image uploads share the same file
     const arrayBuffer = await file.arrayBuffer()
-    const buffer = Buffer.from(arrayBuffer)
-    const contentHash = crypto.createHash("sha256").update(buffer).digest("hex").slice(0, 16)
-    const ext = file.type === "image/webp" ? "webp" : path.extname(file.name).replace(".", "") || "webp"
-    const fileName = `estate-${contentHash}.${ext}`
-    const filePath = path.join(uploadsDir, fileName)
+    const inputBuffer = Buffer.from(arrayBuffer)
 
-    // 5. Write file to disk only if it does not already exist
-    let isDeduplicated = false
-    if (existsSync(filePath)) {
-      isDeduplicated = true
-    } else {
-      await writeFile(filePath, buffer)
+    // 3. Process once at upload with sharp: strip EXIF, resize, encode AVIF + WebP + JPEG in 3 widths
+    const processed = await processImageUpload(inputBuffer)
+
+    // 4. Store all generated variants into object storage / disk with immutable caching
+    const variantUrls: Record<string, string> = {}
+    let primaryUrl = ""
+    let primaryStorageProvider = "local_disk"
+
+    for (const variant of processed.variants) {
+      const stored = await storeFile(variant.key, variant.buffer, variant.contentType)
+      variantUrls[variant.key] = stored.url
+      if (variant.key === processed.primaryKey) {
+        primaryUrl = stored.url
+        primaryStorageProvider = stored.provider
+      }
     }
 
-    const publicUrl = `/uploads/${fileName}`
+    const primaryFileName = processed.primaryKey
+    const primarySize = processed.primaryBuffer.length
 
     return NextResponse.json({
       success: true,
-      url: publicUrl,
-      fileName,
-      size: buffer.length,
-      format: ext,
-      deduplicated: isDeduplicated,
-      message: isDeduplicated
-        ? `Image matched existing asset (${(buffer.length / 1024).toFixed(1)} KB) - zero extra disk storage used`
-        : `Image successfully uploaded (${(buffer.length / 1024).toFixed(1)} KB)`,
+      url: primaryUrl,
+      fileName: primaryFileName,
+      contentHash: processed.contentHash,
+      width: processed.originalWidth,
+      height: processed.originalHeight,
+      size: primarySize,
+      format: "webp",
+      storage: primaryStorageProvider,
+      variants: variantUrls,
+      message: `Image processed with EXIF stripped, AVIF+WebP+JPEG variants generated, and stored via ${primaryStorageProvider} (${(primarySize / 1024).toFixed(1)} KB)`,
     })
   } catch (error: any) {
     console.error("Upload API Error:", error)
