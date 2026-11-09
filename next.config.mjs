@@ -20,6 +20,28 @@ const nextConfig = {
     qualities: [75, 80],
     minimumCacheTTL: 31536000, // 1 year immutable Edge cache
     formats: ["image/avif", "image/webp"],
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+      },
+      {
+        protocol: "https",
+        hostname: "plus.unsplash.com",
+      },
+      {
+        protocol: "https",
+        hostname: "*.public.blob.vercel-storage.com",
+      },
+      {
+        protocol: "https",
+        hostname: "jayalisting.com",
+      },
+      {
+        protocol: "https",
+        hostname: "**",
+      },
+    ],
   },
   async headers() {
     return [
