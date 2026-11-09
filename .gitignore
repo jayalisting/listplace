@@ -32,3 +32,5 @@ Thumbs.db
 
 # Database dumps
 *.sql
+!migrations/*.sql
+backup*.json

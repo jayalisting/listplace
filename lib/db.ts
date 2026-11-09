@@ -1,4 +1,5 @@
 import { Pool } from "pg"
+import crypto from "crypto"
 import { LUXURY_PROPERTIES, LuxuryProperty } from "./luxury-properties"
 import { ImageSeoData, ImageSeoSettings, DEFAULT_IMAGE_SEO_SETTINGS, createDefaultImageSeo } from "./image-seo"
 
@@ -125,12 +126,25 @@ export async function initializeDatabase(): Promise<boolean> {
       await client.query("ALTER TABLE properties ADD COLUMN IF NOT EXISTS custom_faqs JSONB DEFAULT '[]'::jsonb;")
       await client.query("ALTER TABLE properties ADD COLUMN IF NOT EXISTS display_order INT DEFAULT 100;")
       await client.query("ALTER TABLE properties ADD COLUMN IF NOT EXISTS featured_home BOOLEAN DEFAULT false;")
+      await client.query("ALTER TABLE properties ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION;")
+      await client.query("ALTER TABLE properties ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION;")
+      await client.query("ALTER TABLE properties ADD COLUMN IF NOT EXISTS amenity_ids SMALLINT[] DEFAULT '{}'::smallint[];")
+
+      // Amenities lookup table
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS amenities_lookup (
+          id SMALLSERIAL PRIMARY KEY,
+          name VARCHAR(255) UNIQUE NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_amenities_lookup_name ON amenities_lookup(name);
+      `)
 
       // Create Single-Use VIP Share Tokens Table
       await client.query(`
         CREATE TABLE IF NOT EXISTS vip_share_tokens (
           id SERIAL PRIMARY KEY,
           token VARCHAR(100) UNIQUE NOT NULL,
+          token_hash BYTEA,
           property_id VARCHAR(50) NOT NULL,
           client_name VARCHAR(255),
           client_phone VARCHAR(50),
@@ -141,7 +155,7 @@ export async function initializeDatabase(): Promise<boolean> {
           first_viewed_at TIMESTAMP WITH TIME ZONE,
           last_viewed_at TIMESTAMP WITH TIME ZONE
         );
-        CREATE INDEX IF NOT EXISTS idx_vip_tokens_lookup ON vip_share_tokens(token, property_id);
+        CREATE INDEX IF NOT EXISTS idx_vip_tokens_hash ON vip_share_tokens(token_hash);
 
         CREATE TABLE IF NOT EXISTS vip_tour_bookings (
           id SERIAL PRIMARY KEY,
@@ -156,19 +170,39 @@ export async function initializeDatabase(): Promise<boolean> {
           client_phone VARCHAR(50) NOT NULL,
           client_email VARCHAR(255) NOT NULL,
           status VARCHAR(50) DEFAULT 'pending',
+          status_code SMALLINT DEFAULT 0,
           notes TEXT,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
         CREATE INDEX IF NOT EXISTS idx_vip_bookings_created ON vip_tour_bookings(created_at DESC);
 
+        CREATE TABLE IF NOT EXISTS vip_tour_bookings_archive (
+          id INT PRIMARY KEY,
+          property_id VARCHAR(50) NOT NULL,
+          tour_type VARCHAR(50),
+          tour_date VARCHAR(50),
+          tour_time VARCHAR(50),
+          client_name VARCHAR(255),
+          client_phone VARCHAR(50),
+          client_email VARCHAR(255),
+          status_code SMALLINT,
+          status VARCHAR(50),
+          notes TEXT,
+          created_at TIMESTAMPTZ,
+          archived_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+        );
+
         -- Image SEO & Metadata Registry Table
         CREATE TABLE IF NOT EXISTS image_seo_records (
           url VARCHAR(500) PRIMARY KEY,
+          url_hash BYTEA,
+          score SMALLINT DEFAULT 0,
           seo_data JSONB NOT NULL,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_image_seo_url_hash ON image_seo_records(url_hash);
 
         -- Image SEO Global Settings Table
         CREATE TABLE IF NOT EXISTS image_seo_settings (
@@ -262,10 +296,93 @@ export async function initializeDatabase(): Promise<boolean> {
   }
 }
 
+// In-memory cache for amenities_lookup to prevent repeating amenity strings across rows
+let amenitiesCache: Map<number, string> | null = null
+let amenitiesReverseCache: Map<string, number> | null = null
+let amenitiesCacheTime = 0
+
+export async function getAmenitiesLookup(client?: any): Promise<{ idToName: Map<number, string>; nameToId: Map<string, number> }> {
+  const now = Date.now()
+  if (amenitiesCache && amenitiesReverseCache && now - amenitiesCacheTime < 60000) {
+    return { idToName: amenitiesCache, nameToId: amenitiesReverseCache }
+  }
+
+  const queryRunner = client || pool
+  try {
+    const res = await queryRunner.query("SELECT id, name FROM amenities_lookup")
+    const idToName = new Map<number, string>()
+    const nameToId = new Map<string, number>()
+    for (const row of res.rows) {
+      idToName.set(Number(row.id), row.name)
+      nameToId.set(row.name, Number(row.id))
+    }
+    amenitiesCache = idToName
+    amenitiesReverseCache = nameToId
+    amenitiesCacheTime = now
+    return { idToName, nameToId }
+  } catch {
+    return { idToName: amenitiesCache || new Map(), nameToId: amenitiesReverseCache || new Map() }
+  }
+}
+
+export async function syncAmenitiesToIds(client: any, amenityNames: string[]): Promise<number[]> {
+  if (!amenityNames || amenityNames.length === 0) return []
+  const { nameToId } = await getAmenitiesLookup(client)
+  const ids: number[] = []
+
+  for (const raw of amenityNames) {
+    const name = String(raw).trim()
+    if (!name) continue
+    let id = nameToId.get(name)
+    if (!id) {
+      const res = await client.query(
+        "INSERT INTO amenities_lookup (name) VALUES ($1) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING id",
+        [name]
+      )
+      id = Number(res.rows[0].id)
+      nameToId.set(name, id)
+      if (amenitiesCache) amenitiesCache.set(id, name)
+    }
+    ids.push(id)
+  }
+  return ids
+}
+
 /**
  * Maps a raw PostgreSQL row to the LuxuryProperty TypeScript interface.
+ * Reconstructs deduplicated amenities and right-sized numeric/coordinate values.
  */
-function mapRowToProperty(row: any): LuxuryProperty {
+function mapRowToProperty(row: any, amenitiesLookup?: Map<number, string>): LuxuryProperty {
+  let reconstructedAmenities: string[] = []
+  if (Array.isArray(row.amenity_ids) && row.amenity_ids.length > 0 && amenitiesLookup) {
+    reconstructedAmenities = row.amenity_ids
+      .map((id: number) => amenitiesLookup.get(Number(id)))
+      .filter((name: string | undefined): name is string => Boolean(name))
+  }
+
+  if (reconstructedAmenities.length === 0) {
+    reconstructedAmenities = Array.isArray(row.amenities)
+      ? row.amenities
+      : typeof row.amenities === "string"
+      ? JSON.parse(row.amenities)
+      : Array.isArray(row.highlights)
+      ? row.highlights
+      : []
+  }
+
+  const lat =
+    row.lat !== null && row.lat !== undefined
+      ? Number(row.lat)
+      : typeof row.coordinates === "object" && row.coordinates?.lat
+      ? Number(row.coordinates.lat)
+      : 18.9696
+  const lng =
+    row.lng !== null && row.lng !== undefined
+      ? Number(row.lng)
+      : typeof row.coordinates === "object" && row.coordinates?.lng
+      ? Number(row.coordinates.lng)
+      : 72.8081
+
   return {
     id: String(row.id),
     title: row.title,
@@ -298,18 +415,12 @@ function mapRowToProperty(row: any): LuxuryProperty {
     images: Array.isArray(row.images) ? row.images : typeof row.images === "string" ? JSON.parse(row.images) : [],
     description: row.description || "",
     highlights: Array.isArray(row.highlights) ? row.highlights : typeof row.highlights === "string" ? JSON.parse(row.highlights) : [],
-    amenities: Array.isArray(row.amenities)
-      ? row.amenities
-      : typeof row.amenities === "string"
-      ? JSON.parse(row.amenities)
-      : Array.isArray(row.highlights)
-      ? row.highlights
-      : [],
+    amenities: reconstructedAmenities,
     details: typeof row.details === "object" ? row.details : typeof row.details === "string" ? JSON.parse(row.details) : {},
     landmarks: Array.isArray(row.landmarks) ? row.landmarks : typeof row.landmarks === "string" ? JSON.parse(row.landmarks) : [],
     seller: typeof row.seller === "object" ? row.seller : typeof row.seller === "string" ? JSON.parse(row.seller) : {},
     roi: row.roi || undefined,
-    coordinates: typeof row.coordinates === "object" ? row.coordinates : typeof row.coordinates === "string" ? JSON.parse(row.coordinates) : { lat: 18.9696, lng: 72.8081 },
+    coordinates: { lat, lng },
     subType: row.sub_type || undefined,
     purpose: row.purpose || undefined,
     ownership: row.ownership || undefined,
@@ -356,9 +467,10 @@ export async function getDbProperties(category?: string, includePrivate = false)
 
     query += " ORDER BY featured_home DESC, display_order ASC, id DESC"
     const res = await pool.query(query, params)
+    const { idToName } = await getAmenitiesLookup()
 
     // Direct reflection of database state:
-    return res.rows.map(mapRowToProperty)
+    return res.rows.map((row) => mapRowToProperty(row, idToName))
   } catch (error) {
     console.error("Error querying PostgreSQL, falling back to local memory:", error)
     let list = LUXURY_PROPERTIES
@@ -380,7 +492,8 @@ export async function getDbPropertyById(id: string): Promise<LuxuryProperty | nu
     await initializeDatabase()
     const res = await pool.query("SELECT * FROM properties WHERE id = $1", [id])
     if (res.rows.length > 0) {
-      return mapRowToProperty(res.rows[0])
+      const { idToName } = await getAmenitiesLookup()
+      return mapRowToProperty(res.rows[0], idToName)
     }
     return null
   } catch (error) {
@@ -483,6 +596,10 @@ export async function createDbProperty(data: Partial<LuxuryProperty>): Promise<L
 
   const client = await pool.connect()
   try {
+    const amenityIds = await syncAmenitiesToIds(client, newProperty.amenities)
+    const lat = newProperty.coordinates?.lat || 18.9696
+    const lng = newProperty.coordinates?.lng || 72.8081
+
     await client.query(
       `
       INSERT INTO properties (
@@ -492,12 +609,14 @@ export async function createDbProperty(data: Partial<LuxuryProperty>): Promise<L
         rating, reviews, is_new, is_exclusive, is_trophy, tags, images,
         description, highlights, details, landmarks, seller, roi, coordinates, amenities,
         sub_type, purpose, ownership, visibility, strength_score, verification_tier,
-        attributes, facilities, documents, custom_faqs, display_order, featured_home
+        attributes, facilities, documents, custom_faqs, display_order, featured_home,
+        lat, lng, amenity_ids
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
         $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27,
         $28, $29, $30, $31, $32, $33, $34, $35, $36, $37,
-        $38, $39, $40, $41, $42, $43, $44, $45, $46, $47, $48, $49
+        $38, $39, $40, $41, $42, $43, $44, $45, $46, $47, $48, $49,
+        $50, $51, $52
       );
     `,
       [
@@ -550,6 +669,9 @@ export async function createDbProperty(data: Partial<LuxuryProperty>): Promise<L
         JSON.stringify(newProperty.customFaqs || []),
         newProperty.displayOrder ?? 100,
         newProperty.featuredHome ?? false,
+        lat,
+        lng,
+        amenityIds,
       ]
     )
     return newProperty
@@ -675,8 +797,11 @@ export async function updateDbProperty(id: string, updates: Partial<LuxuryProper
         custom_faqs = $46,
         display_order = $47,
         featured_home = $48,
+        lat = $49,
+        lng = $50,
+        amenity_ids = $51,
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $49
+      WHERE id = $52
       RETURNING *;
       `,
       [
@@ -728,12 +853,16 @@ export async function updateDbProperty(id: string, updates: Partial<LuxuryProper
         JSON.stringify(merged.customFaqs || []),
         merged.displayOrder ?? 100,
         merged.featuredHome ?? false,
+        merged.coordinates?.lat || 18.9696,
+        merged.coordinates?.lng || 72.8081,
+        await syncAmenitiesToIds(client, merged.amenities),
         id,
       ]
     )
 
     if (res.rows.length > 0) {
-      return mapRowToProperty(res.rows[0])
+      const { idToName } = await getAmenitiesLookup(client)
+      return mapRowToProperty(res.rows[0], idToName)
     }
     return null
   } finally {
@@ -748,12 +877,14 @@ export async function updateDbPropertyAmenities(id: string, amenities: string[])
   await initializeDatabase()
   const client = await pool.connect()
   try {
+    const amenityIds = await syncAmenitiesToIds(client, amenities)
     const res = await client.query(
-      "UPDATE properties SET amenities = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *",
-      [JSON.stringify(amenities), id]
+      "UPDATE properties SET amenities = $1, amenity_ids = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 RETURNING *",
+      [JSON.stringify(amenities), amenityIds, id]
     )
     if (res.rows.length > 0) {
-      return mapRowToProperty(res.rows[0])
+      const { idToName } = await getAmenitiesLookup(client)
+      return mapRowToProperty(res.rows[0], idToName)
     }
     return null
   } finally {
@@ -863,14 +994,15 @@ export async function createVipShareToken(
   const client = await pool.connect()
   try {
     const rawToken = "vip_" + Math.random().toString(36).substring(2, 9) + Date.now().toString(36)
+    const tokenHash = crypto.createHash("sha256").update(rawToken).digest()
     const res = await client.query(
       `
       INSERT INTO vip_share_tokens (
-        token, property_id, client_name, client_phone, max_views, status
-      ) VALUES ($1, $2, $3, $4, $5, 'active')
+        token, token_hash, property_id, client_name, client_phone, max_views, status
+      ) VALUES ($1, $2, $3, $4, $5, $6, 'active')
       RETURNING *;
       `,
-      [rawToken, propertyId, clientName || null, clientPhone || null, maxViews]
+      [rawToken, tokenHash, propertyId, clientName || null, clientPhone || null, maxViews]
     )
     return res.rows[0]
   } finally {
@@ -927,13 +1059,14 @@ export async function verifyAndConsumeVipToken(
   await initializeDatabase()
   const client = await pool.connect()
   try {
+    const tokenHash = crypto.createHash("sha256").update(token).digest()
     const res = await client.query(
       `
       SELECT * FROM vip_share_tokens
-      WHERE token = $1 AND property_id = $2
+      WHERE (token_hash = $1 OR token = $2) AND property_id = $3
       LIMIT 1;
       `,
-      [token, propertyId]
+      [tokenHash, token, propertyId]
     )
 
     if (res.rows.length === 0) {
@@ -1032,8 +1165,8 @@ export async function createDbVipTourBooking(data: {
       INSERT INTO vip_tour_bookings (
         property_id, property_title, property_price, property_location,
         tour_type, tour_date, tour_time, client_name, client_phone, client_email,
-        notes, status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'pending')
+        notes, status, status_code
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'pending', 0)
       RETURNING *;
       `,
       [
@@ -1057,16 +1190,35 @@ export async function createDbVipTourBooking(data: {
 }
 
 /**
- * Retrieve all VIP Tour Bookings ordered by latest first
+ * Retrieve all VIP Tour Bookings ordered by latest first.
+ * Left joins properties to avoid redundant data duplication.
  */
 export async function getDbVipTourBookings(): Promise<VipTourBookingRecord[]> {
   try {
     await initializeDatabase()
     const client = await pool.connect()
     try {
-      const res = await client.query(
-        "SELECT * FROM vip_tour_bookings ORDER BY created_at DESC;"
-      )
+      const res = await client.query(`
+        SELECT 
+          b.id,
+          b.property_id,
+          COALESCE(b.property_title, p.title, 'Luxury Estate') AS property_title,
+          COALESCE(b.property_price, p.price, 'Price on Request') AS property_price,
+          COALESCE(b.property_location, p.location, 'Prime Location') AS property_location,
+          b.tour_type,
+          b.tour_date,
+          b.tour_time,
+          b.client_name,
+          b.client_phone,
+          b.client_email,
+          COALESCE(b.status, CASE b.status_code WHEN 1 THEN 'confirmed' WHEN 2 THEN 'completed' WHEN 3 THEN 'cancelled' ELSE 'pending' END) AS status,
+          b.notes,
+          b.created_at,
+          b.updated_at
+        FROM vip_tour_bookings b
+        LEFT JOIN properties p ON p.id = b.property_id
+        ORDER BY b.created_at DESC;
+      `)
       return res.rows
     } finally {
       client.release()
@@ -1085,16 +1237,23 @@ export async function updateDbVipTourBookingStatus(
   status: "pending" | "confirmed" | "completed" | "cancelled"
 ): Promise<VipTourBookingRecord | null> {
   await initializeDatabase()
+  const statusCodeMap: Record<string, number> = {
+    pending: 0,
+    confirmed: 1,
+    completed: 2,
+    cancelled: 3,
+  }
+  const statusCode = statusCodeMap[status] ?? 0
   const client = await pool.connect()
   try {
     const res = await client.query(
       `
       UPDATE vip_tour_bookings
-      SET status = $1, updated_at = CURRENT_TIMESTAMP
-      WHERE id = $2
+      SET status = $1, status_code = $2, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $3
       RETURNING *;
       `,
-      [status, id]
+      [status, statusCode, id]
     )
     return res.rows[0] || null
   } finally {
@@ -1132,9 +1291,21 @@ export async function getImageSeoRecord(url: string): Promise<ImageSeoData | nul
   await initializeDatabase()
   const client = await pool.connect()
   try {
-    const res = await client.query("SELECT seo_data FROM image_seo_records WHERE url = $1 LIMIT 1", [url])
+    const urlHash = crypto.createHash("sha256").update(url).digest()
+    const res = await client.query(
+      "SELECT url, score, seo_data FROM image_seo_records WHERE url_hash = $1 OR url = $2 LIMIT 1",
+      [urlHash, url]
+    )
     if (res.rows.length > 0) {
-      return res.rows[0].seo_data as ImageSeoData
+      const stored = res.rows[0].seo_data as Record<string, any>
+      const settings = await getImageSeoSettings()
+      const defaults = createDefaultImageSeo(url, settings)
+      return {
+        ...defaults,
+        ...stored,
+        url,
+        score: res.rows[0].score !== null && res.rows[0].score !== undefined ? Number(res.rows[0].score) : stored?.score ?? 0,
+      } as ImageSeoData
     }
     return null
   } catch (error) {
@@ -1146,7 +1317,7 @@ export async function getImageSeoRecord(url: string): Promise<ImageSeoData | nul
 }
 
 /**
- * Save or update Image SEO metadata
+ * Save or update Image SEO metadata with compact delta storage and right-sized score
  */
 export async function saveImageSeoRecord(data: ImageSeoData): Promise<ImageSeoData> {
   await initializeDatabase()
@@ -1156,14 +1327,25 @@ export async function saveImageSeoRecord(data: ImageSeoData): Promise<ImageSeoDa
       ...data,
       updatedAt: new Date().toISOString(),
     }
+    const urlHash = crypto.createHash("sha256").update(data.url).digest()
+    const scoreVal = typeof data.score === "number" ? Math.round(data.score) : 0
+
+    // Delta storage: omit redundant defaults that match global settings
+    const settings = await getImageSeoSettings()
+    const delta: Record<string, any> = { ...sanitized }
+    if (delta.creator === settings.defaultCreator) delete delta.creator
+    if (delta.credit === settings.defaultCredit) delete delta.credit
+    if (delta.copyright === settings.defaultCopyright) delete delta.copyright
+    if (delta.license === settings.defaultLicense) delete delta.license
+
     await client.query(
       `
-      INSERT INTO image_seo_records (url, seo_data, updated_at)
-      VALUES ($1, $2, CURRENT_TIMESTAMP)
+      INSERT INTO image_seo_records (url, url_hash, score, seo_data, updated_at)
+      VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
       ON CONFLICT (url) DO UPDATE
-      SET seo_data = $2, updated_at = CURRENT_TIMESTAMP;
+      SET url_hash = $2, score = $3, seo_data = $4, updated_at = CURRENT_TIMESTAMP;
       `,
-      [data.url, JSON.stringify(sanitized)]
+      [data.url, urlHash, scoreVal, JSON.stringify(delta)]
     )
     return sanitized
   } finally {
@@ -1178,8 +1360,18 @@ export async function getAllImageSeoRecords(): Promise<ImageSeoData[]> {
   await initializeDatabase()
   const client = await pool.connect()
   try {
-    const res = await client.query("SELECT seo_data FROM image_seo_records ORDER BY updated_at DESC")
-    return res.rows.map((r) => r.seo_data as ImageSeoData)
+    const res = await client.query("SELECT url, score, seo_data FROM image_seo_records ORDER BY updated_at DESC")
+    const settings = await getImageSeoSettings()
+    return res.rows.map((r) => {
+      const stored = r.seo_data as Record<string, any>
+      const defaults = createDefaultImageSeo(r.url, settings)
+      return {
+        ...defaults,
+        ...stored,
+        url: r.url,
+        score: r.score !== null && r.score !== undefined ? Number(r.score) : stored?.score ?? 0,
+      } as ImageSeoData
+    })
   } catch (error) {
     console.error("Error fetching all Image SEO records:", error)
     return []
