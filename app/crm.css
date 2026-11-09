@@ -84,10 +84,25 @@
   font: inherit;
   padding: 9px 12px;
   border-radius: 10px;
-  border: 1.5px solid var(--crm-border);
-  background: var(--crm-card);
-  color: var(--crm-text);
   transition: all 0.15s ease;
+}
+
+.crm-scope input:not([class*="border-"]),
+.crm-scope select:not([class*="border-"]),
+.crm-scope textarea:not([class*="border-"]) {
+  border: 1.5px solid var(--crm-border);
+}
+
+.crm-scope input:not([class*="bg-"]),
+.crm-scope select:not([class*="bg-"]),
+.crm-scope textarea:not([class*="bg-"]) {
+  background: var(--crm-card);
+}
+
+.crm-scope input:not([class*="text-"]),
+.crm-scope select:not([class*="text-"]),
+.crm-scope textarea:not([class*="text-"]) {
+  color: var(--crm-text);
 }
 
 .crm-scope input:focus,
@@ -100,18 +115,33 @@
 
 .crm-scope button {
   font: inherit;
-  padding: 8px 14px;
-  border-radius: 10px;
-  border: 1px solid var(--crm-border);
-  background: var(--crm-card);
-  color: var(--crm-text);
   cursor: pointer;
-  font-weight: 600;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
   transition: all 0.15s;
+}
+
+.crm-scope button:not([class*="p-"]):not([class*="px-"]):not([class*="py-"]) {
+  padding: 8px 14px;
+}
+
+.crm-scope button:not([class*="rounded-"]) {
+  border-radius: 10px;
+}
+
+.crm-scope button:not([class*="border-"]) {
+  border: 1px solid var(--crm-border);
+}
+
+.crm-scope button:not([class*="bg-"]) {
+  background: var(--crm-card);
+}
+
+.crm-scope button:not([class*="text-"]) {
+  color: var(--crm-text);
+  font-weight: 600;
 }
 
 .crm-scope button.p {

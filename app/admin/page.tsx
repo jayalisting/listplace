@@ -1077,10 +1077,10 @@ export default function AdminPage() {
         </div>
 
         {/* Top-Level Navigation Switcher */}
-        <div className="flex items-center space-x-2 border-b border-gray-200 dark:border-gray-800 pb-3">
+        <div className="flex items-center space-x-2 overflow-x-auto scrollbar-none pb-3 border-b border-gray-200 dark:border-gray-800">
           <button
             onClick={() => setMainAdminTab("estates")}
-            className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold flex items-center space-x-2 transition-all ${
+            className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold flex items-center space-x-2 whitespace-nowrap flex-shrink-0 transition-all ${
               mainAdminTab === "estates"
                 ? "bg-rose-900 text-white shadow-md shadow-rose-900/30"
                 : "bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-rose-50"
@@ -1095,7 +1095,7 @@ export default function AdminPage() {
               setMainAdminTab("vip_appointments")
               fetchVipBookings()
             }}
-            className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold flex items-center space-x-2 transition-all ${
+            className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold flex items-center space-x-2 whitespace-nowrap flex-shrink-0 transition-all ${
               mainAdminTab === "vip_appointments"
                 ? "bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 text-slate-950 shadow-md shadow-amber-500/20 font-black"
                 : "bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-amber-50"
@@ -1118,7 +1118,7 @@ export default function AdminPage() {
 
           <button
             onClick={() => setMainAdminTab("image_seo")}
-            className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold flex items-center space-x-2 transition-all ${
+            className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold flex items-center space-x-2 whitespace-nowrap flex-shrink-0 transition-all ${
               mainAdminTab === "image_seo"
                 ? "bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 text-slate-950 shadow-md shadow-amber-500/20 font-black"
                 : "bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-amber-50"
@@ -1130,7 +1130,7 @@ export default function AdminPage() {
 
           <button
             onClick={() => setMainAdminTab("database_monitor")}
-            className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold flex items-center space-x-2 transition-all ${
+            className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold flex items-center space-x-2 whitespace-nowrap flex-shrink-0 transition-all ${
               mainAdminTab === "database_monitor"
                 ? "bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white shadow-md shadow-emerald-600/20 font-black"
                 : "bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-emerald-50"
@@ -1142,7 +1142,7 @@ export default function AdminPage() {
 
           <button
             onClick={() => setMainAdminTab("crm")}
-            className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold flex items-center space-x-2 transition-all ${
+            className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold flex items-center space-x-2 whitespace-nowrap flex-shrink-0 transition-all ${
               mainAdminTab === "crm"
                 ? "bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 text-white shadow-md shadow-indigo-600/20 font-black"
                 : "bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-indigo-50"
