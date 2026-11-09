@@ -2443,10 +2443,10 @@ export default function SimpleAddListingPage() {
                 label="Estate Gallery & Visual Assets"
                 helperText="Upload any camera or phone photo. Click 'SEO' on any thumbnail to configure Alt text, AI Search & AEO descriptions, and 301 redirects."
                 propertyContext={{
-                  title: title || "Luxury Architectural Estate",
-                  location: location || "Mangaluru, Karnataka",
+                  title: title || `${propertyType} in ${locality}, ${city}`,
+                  location: `${locality}, ${city}`,
                   category,
-                  price,
+                  price: priceOnRequest ? "Price on Request" : typeof askingPrice === "number" ? formatIndianCurrency(askingPrice) : "Price on Request",
                 }}
               />
             </div>
