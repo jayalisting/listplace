@@ -21,11 +21,23 @@ export default class AdminErrorBoundary extends Component<Props, State> {
     this.state = { hasError: false, error: null }
   }
 
-  static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error }
+  static getDerivedStateFromError(error: any): State {
+    const normalizedError =
+      error instanceof Error
+        ? error
+        : new Error(
+            typeof error === "string"
+              ? error
+              : typeof error === "object" && error !== null && "message" in error
+              ? String((error as any).message)
+              : typeof error === "object" && error !== null && "type" in error
+              ? `Event error (${(error as any).type})`
+              : "An unexpected error occurred."
+          )
+    return { hasError: true, error: normalizedError }
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  componentDidCatch(error: any, errorInfo: ErrorInfo) {
     console.error("Admin view error caught by boundary:", error, errorInfo)
   }
 

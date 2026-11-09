@@ -76,8 +76,9 @@ export async function initializeDatabase(): Promise<boolean> {
   try {
     const client = await pool.connect()
     try {
-      // Fast path: probe whether table and schema are already available
-      await client.query("SELECT 1 FROM properties LIMIT 1")
+      // Fast path: probe whether table, updated columns and crm_store are available
+      await client.query("SELECT lat FROM properties LIMIT 1")
+      await client.query("SELECT 1 FROM crm_store LIMIT 1")
       isInitialized = true
       return true
     } catch {

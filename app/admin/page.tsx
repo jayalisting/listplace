@@ -786,14 +786,15 @@ export default function AdminPage() {
 
   // Filter listings
   const filtered = properties.filter((p) => {
+    if (!p) return false
     if (activeTab !== "all" && p.category !== activeTab) return false
     if (searchFilter.trim()) {
       const q = searchFilter.toLowerCase()
       return (
-        p.title.toLowerCase().includes(q) ||
-        p.location.toLowerCase().includes(q) ||
-        p.city.toLowerCase().includes(q) ||
-        p.propertyType.toLowerCase().includes(q)
+        (p.title || "").toLowerCase().includes(q) ||
+        (p.location || "").toLowerCase().includes(q) ||
+        (p.city || "").toLowerCase().includes(q) ||
+        (p.propertyType || "").toLowerCase().includes(q)
       )
     }
     return true
@@ -1153,6 +1154,7 @@ export default function AdminPage() {
           </button>
         </div>
 
+        <AdminErrorBoundary key={mainAdminTab} fallbackTitle="Admin Section Encountered an Error">
         {mainAdminTab === "estates" ? (
           <>
             {/* Category Tabs: Strictly 1. Residential, 2. Commercial, 3. Industrial, 4. Agricultural */}
@@ -1243,8 +1245,8 @@ export default function AdminPage() {
                 <div className="flex items-center space-x-4 min-w-0">
                   <div className="relative w-20 h-16 sm:w-24 sm:h-18 rounded-xl overflow-hidden bg-slate-900 flex-shrink-0 border border-gray-200 dark:border-gray-700">
                     <Image
-                      src={item.images[0] || "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=400&q=80"}
-                      alt={item.title}
+                      src={(Array.isArray(item.images) && item.images[0]) || "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=400&q=80"}
+                      alt={item.title || "Estate Listing"}
                       fill
                       loading="lazy"
                       className="object-cover"
@@ -1777,7 +1779,7 @@ export default function AdminPage() {
                       {/* Client Contact Links */}
                       <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-gray-200 dark:border-gray-700">
                         <a
-                          href={`https://wa.me/${waPhone}?text=Hello%20${encodeURIComponent(b.client_name)},%20this%20is%20the%20Private%20Client%20Office%20at%20JayaListing%20regarding%20your%20VIP%20viewing%20request%20for%20${encodeURIComponent(b.property_title)}.`}
+                          href={`https://wa.me/${waPhone}?text=Hello%20${encodeURIComponent(b.client_name || "")},%20this%20is%20the%20Private%20Client%20Office%20at%20JayaListing%20regarding%20your%20VIP%20viewing%20request%20for%20${encodeURIComponent(b.property_title || "")}.`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#25D366] hover:bg-[#20ba59] text-white font-bold text-[11px] transition-colors shadow-xs"
@@ -1787,19 +1789,19 @@ export default function AdminPage() {
                         </a>
 
                         <a
-                          href={`tel:${b.client_phone.replace(/\s+/g, "")}`}
+                          href={`tel:${String(b.client_phone || "").replace(/\s+/g, "")}`}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 hover:bg-gray-100 text-gray-900 dark:text-white font-bold text-[11px] transition-colors"
                         >
                           <Phone className="w-3.5 h-3.5 text-rose-900" />
-                          <span>{b.client_phone}</span>
+                          <span>{b.client_phone || "No Phone"}</span>
                         </a>
 
                         <a
-                          href={`mailto:${b.client_email}`}
+                          href={`mailto:${b.client_email || ""}`}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 hover:bg-gray-100 text-gray-900 dark:text-white font-bold text-[11px] transition-colors"
                         >
                           <Mail className="w-3.5 h-3.5 text-rose-900" />
-                          <span>{b.client_email}</span>
+                          <span>{b.client_email || "No Email"}</span>
                         </a>
                       </div>
 
@@ -1829,6 +1831,7 @@ export default function AdminPage() {
         <CrmWorkspace />
       </AdminErrorBoundary>
     ) : null}
+        </AdminErrorBoundary>
       </main>
 
       {/* Full Property Customizer Modal (Make ALL fields customizable) */}

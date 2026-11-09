@@ -188,9 +188,20 @@ const formatDate = (s: string | undefined) =>
 const waUrl = (p: string | undefined) =>
   "https://wa.me/" + String(p || "").replace(/\D/g, "").replace(/^(\d{10})$/, "91$1")
 
+const DEFAULT_CRM_DATA: CrmState = {
+  people: [],
+  props: [],
+  tasks: [],
+  files: [],
+  trash: [],
+  settings: { followupRules: {}, whatsappTemplates: [], savedViews: [] },
+  version: 1,
+}
+
 // ── Main Component ─────────────────────────────────────────────────────────
 export default function CrmWorkspace() {
-  const [db, setDb] = useState<CrmState | null>(null)
+  const [db, setDb] = useState<CrmState>(DEFAULT_CRM_DATA)
+  const [isLoading, setIsLoading] = useState(true)
   const [nav, setNav] = useState<{ screen: "today" | "props" | "people" | "backup" | "prop" | "person"; id?: string }>({
     screen: "today",
   })
@@ -227,15 +238,9 @@ export default function CrmWorkspace() {
       })
     } catch (err) {
       console.error("Failed to load CRM state:", err)
-      setDb({
-        people: [],
-        props: [],
-        tasks: [],
-        files: [],
-        trash: [],
-        settings: { followupRules: {}, whatsappTemplates: [], savedViews: [] },
-        version: 1,
-      })
+      setDb(DEFAULT_CRM_DATA)
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -1149,7 +1154,7 @@ export default function CrmWorkspace() {
         (() => {
           const p = getProp(nav.id)!
           const id = p.id
-          const files = db.files.filter((f) => f.pid === id)
+          const files = (db?.files || []).filter((f) => f && f.pid === id)
           const docs = files.filter((f) => f.type !== "Photo")
           const photos = files.filter((f) => f.type === "Photo")
           const missingDocs = REQUIRED_DOCS.filter((t) => !files.some((f) => f.type === t))
@@ -1500,7 +1505,7 @@ export default function CrmWorkspace() {
         (() => {
           const person = getPerson(nav.id)!
           const id = person.id
-          const linkedProps = db.props.filter((x) => x.owners.includes(id) || x.brokers.some((b: any) => (typeof b === "string" ? b === id : b.pid === id)))
+          const linkedProps = (db?.props || []).filter((x) => (x?.owners || []).includes(id) || (x?.brokers || []).some((b: any) => (typeof b === "string" ? b === id : b?.pid === id)))
 
           return (
             <div className="space-y-4">
@@ -1626,7 +1631,7 @@ export default function CrmWorkspace() {
 
               if (!name) return
 
-              const nextIdNum = 1 + Math.max(0, ...db.props.map((p) => parseInt(p.id.replace(/\D/g, "") || "0", 10)))
+              const nextIdNum = 1 + Math.max(0, ...(db?.props || []).map((p) => parseInt(String(p?.id || "").replace(/\D/g, "") || "0", 10)))
               const id = `PROP-${String(nextIdNum).padStart(4, "0")}`
 
               updateState((d) => {
