@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { writeFile, mkdir } from "fs/promises"
 import path from "path"
 import { existsSync } from "fs"
+import crypto from "crypto"
 
 export const dynamic = "force-dynamic"
 
@@ -55,17 +56,21 @@ export async function POST(req: NextRequest) {
       await mkdir(uploadsDir, { recursive: true })
     }
 
-    // 4. Generate unique, clean WebP or original extension filename
-    const ext = file.type === "image/webp" ? "webp" : path.extname(file.name).replace(".", "") || "webp"
-    const timestamp = Date.now()
-    const randomSuffix = Math.random().toString(36).substring(2, 8)
-    const fileName = `estate-${timestamp}-${randomSuffix}.${ext}`
-    const filePath = path.join(uploadsDir, fileName)
-
-    // 5. Write file to disk
+    // 4. Content-hash deduplication: Identical image uploads share the same file
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
-    await writeFile(filePath, buffer)
+    const contentHash = crypto.createHash("sha256").update(buffer).digest("hex").slice(0, 16)
+    const ext = file.type === "image/webp" ? "webp" : path.extname(file.name).replace(".", "") || "webp"
+    const fileName = `estate-${contentHash}.${ext}`
+    const filePath = path.join(uploadsDir, fileName)
+
+    // 5. Write file to disk only if it does not already exist
+    let isDeduplicated = false
+    if (existsSync(filePath)) {
+      isDeduplicated = true
+    } else {
+      await writeFile(filePath, buffer)
+    }
 
     const publicUrl = `/uploads/${fileName}`
 
@@ -75,7 +80,10 @@ export async function POST(req: NextRequest) {
       fileName,
       size: buffer.length,
       format: ext,
-      message: `Image successfully uploaded (${(buffer.length / 1024).toFixed(1)} KB)`,
+      deduplicated: isDeduplicated,
+      message: isDeduplicated
+        ? `Image matched existing asset (${(buffer.length / 1024).toFixed(1)} KB) - zero extra disk storage used`
+        : `Image successfully uploaded (${(buffer.length / 1024).toFixed(1)} KB)`,
     })
   } catch (error: any) {
     console.error("Upload API Error:", error)

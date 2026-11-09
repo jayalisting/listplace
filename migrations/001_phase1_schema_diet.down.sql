@@ -34,3 +34,4 @@ ALTER TABLE image_seo_records DROP COLUMN IF EXISTS score;
 -- 4. Revert vip_tour_bookings
 ALTER TABLE vip_tour_bookings DROP COLUMN IF EXISTS status_code;
 DROP TABLE IF EXISTS vip_tour_bookings_archive;
+

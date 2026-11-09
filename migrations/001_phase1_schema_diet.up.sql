@@ -97,3 +97,4 @@ CREATE TABLE IF NOT EXISTS vip_tour_bookings_archive (
   archived_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_vip_archive_date ON vip_tour_bookings_archive(created_at);
+

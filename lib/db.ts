@@ -2,6 +2,7 @@ import { Pool } from "pg"
 import crypto from "crypto"
 import { LUXURY_PROPERTIES, LuxuryProperty } from "./luxury-properties"
 import { ImageSeoData, ImageSeoSettings, DEFAULT_IMAGE_SEO_SETTINGS, createDefaultImageSeo } from "./image-seo"
+import { encodeJson, decodeJson, encodeText, decodeText } from "./compress"
 
 // Global pool instance to prevent connection exhaustion in Next.js hot reload / serverless
 const globalForPg = globalThis as unknown as {
@@ -1293,16 +1294,21 @@ export async function getImageSeoRecord(url: string): Promise<ImageSeoData | nul
   try {
     const urlHash = crypto.createHash("sha256").update(url).digest()
     const res = await client.query(
-      "SELECT url, score, seo_data FROM image_seo_records WHERE url_hash = $1 OR url = $2 LIMIT 1",
+      "SELECT url, score, seo_data, cold_payload FROM image_seo_records WHERE url_hash = $1 OR url = $2 LIMIT 1",
       [urlHash, url]
     )
     if (res.rows.length > 0) {
-      const stored = res.rows[0].seo_data as Record<string, any>
+      const stored = (res.rows[0].seo_data || {}) as Record<string, any>
       const settings = await getImageSeoSettings()
       const defaults = createDefaultImageSeo(url, settings)
+      const coldData = res.rows[0].cold_payload
+        ? decodeJson<{ transcript?: string; aiDescription?: string }>(res.rows[0].cold_payload)
+        : null
+
       return {
         ...defaults,
         ...stored,
+        ...(coldData || {}),
         url,
         score: res.rows[0].score !== null && res.rows[0].score !== undefined ? Number(res.rows[0].score) : stored?.score ?? 0,
       } as ImageSeoData
@@ -1317,7 +1323,7 @@ export async function getImageSeoRecord(url: string): Promise<ImageSeoData | nul
 }
 
 /**
- * Save or update Image SEO metadata with compact delta storage and right-sized score
+ * Save or update Image SEO metadata with compact delta storage, right-sized score, and Brotli cold storage
  */
 export async function saveImageSeoRecord(data: ImageSeoData): Promise<ImageSeoData> {
   await initializeDatabase()
@@ -1338,14 +1344,28 @@ export async function saveImageSeoRecord(data: ImageSeoData): Promise<ImageSeoDa
     if (delta.copyright === settings.defaultCopyright) delete delta.copyright
     if (delta.license === settings.defaultLicense) delete delta.license
 
+    // Brotli compression for large cold text (transcripts & AI descriptions)
+    let coldPayload: Buffer | null = null
+    if (
+      (data.transcript && data.transcript.length >= 256) ||
+      (data.aiDescription && data.aiDescription.length >= 256)
+    ) {
+      coldPayload = encodeJson({
+        transcript: data.transcript,
+        aiDescription: data.aiDescription,
+      })
+      delete delta.transcript
+      delete delta.aiDescription
+    }
+
     await client.query(
       `
-      INSERT INTO image_seo_records (url, url_hash, score, seo_data, updated_at)
-      VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
+      INSERT INTO image_seo_records (url, url_hash, score, seo_data, cold_payload, updated_at)
+      VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
       ON CONFLICT (url) DO UPDATE
-      SET url_hash = $2, score = $3, seo_data = $4, updated_at = CURRENT_TIMESTAMP;
+      SET url_hash = $2, score = $3, seo_data = $4, cold_payload = $5, updated_at = CURRENT_TIMESTAMP;
       `,
-      [data.url, urlHash, scoreVal, JSON.stringify(delta)]
+      [data.url, urlHash, scoreVal, JSON.stringify(delta), coldPayload]
     )
     return sanitized
   } finally {
@@ -1360,14 +1380,19 @@ export async function getAllImageSeoRecords(): Promise<ImageSeoData[]> {
   await initializeDatabase()
   const client = await pool.connect()
   try {
-    const res = await client.query("SELECT url, score, seo_data FROM image_seo_records ORDER BY updated_at DESC")
+    const res = await client.query("SELECT url, score, seo_data, cold_payload FROM image_seo_records ORDER BY updated_at DESC")
     const settings = await getImageSeoSettings()
     return res.rows.map((r) => {
-      const stored = r.seo_data as Record<string, any>
+      const stored = (r.seo_data || {}) as Record<string, any>
       const defaults = createDefaultImageSeo(r.url, settings)
+      const coldData = r.cold_payload
+        ? decodeJson<{ transcript?: string; aiDescription?: string }>(r.cold_payload)
+        : null
+
       return {
         ...defaults,
         ...stored,
+        ...(coldData || {}),
         url: r.url,
         score: r.score !== null && r.score !== undefined ? Number(r.score) : stored?.score ?? 0,
       } as ImageSeoData
@@ -1375,6 +1400,39 @@ export async function getAllImageSeoRecords(): Promise<ImageSeoData[]> {
   } catch (error) {
     console.error("Error fetching all Image SEO records:", error)
     return []
+  } finally {
+    client.release()
+  }
+}
+
+/**
+ * Archive historical completed/cancelled VIP bookings older than N months into compressed archive
+ */
+export async function archiveOldVipBookings(monthsOld = 3): Promise<number> {
+  await initializeDatabase()
+  const client = await pool.connect()
+  try {
+    const res = await client.query(
+      `
+      WITH moved AS (
+        DELETE FROM vip_tour_bookings
+        WHERE status IN ('completed', 'cancelled')
+          AND created_at < NOW() - ($1 || ' months')::INTERVAL
+        RETURNING *
+      )
+      INSERT INTO vip_tour_bookings_archive (
+        id, property_id, tour_type, tour_date, tour_time,
+        client_name, client_phone, client_email, status_code, status, notes, notes_compressed, created_at
+      )
+      SELECT 
+        id, property_id, tour_type, tour_date, tour_time,
+        client_name, client_phone, client_email, status_code, status, notes, NULL, created_at
+      FROM moved
+      RETURNING id;
+      `,
+      [monthsOld]
+    )
+    return res.rowCount ?? 0
   } finally {
     client.release()
   }
