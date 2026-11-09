@@ -61,6 +61,7 @@ import PropertyShareModal from "@/components/property-share-modal"
 import AdminImageSeoManager from "@/components/admin-image-seo-manager"
 import AdminDatabaseMonitor from "@/components/admin-database-monitor"
 import CrmWorkspace from "@/components/crm-workspace"
+import AdminErrorBoundary from "@/components/admin-error-boundary"
 
 export default function AdminPage() {
   const [properties, setProperties] = useState<LuxuryProperty[]>([])
@@ -1647,7 +1648,7 @@ export default function AdminPage() {
         ) : (
           <div className="grid grid-cols-1 gap-4">
             {vipBookings.map((b) => {
-              const waDigits = b.client_phone.replace(/\D/g, "")
+              const waDigits = String(b.client_phone || "").replace(/\D/g, "")
               const waPhone = waDigits.length === 10 ? `91${waDigits}` : waDigits
               const isVirtual = b.tour_type === "virtual"
 
@@ -1816,12 +1817,18 @@ export default function AdminPage() {
         )}
       </div>
     ) : mainAdminTab === "image_seo" ? (
-      <AdminImageSeoManager />
+      <AdminErrorBoundary fallbackTitle="Image SEO Manager encountered an error">
+        <AdminImageSeoManager />
+      </AdminErrorBoundary>
     ) : mainAdminTab === "database_monitor" ? (
-      <AdminDatabaseMonitor />
-    ) : (
-      <CrmWorkspace />
-    )}
+      <AdminErrorBoundary fallbackTitle="Database Monitor encountered an error">
+        <AdminDatabaseMonitor />
+      </AdminErrorBoundary>
+    ) : mainAdminTab === "crm" ? (
+      <AdminErrorBoundary fallbackTitle="Real Estate CRM encountered an error" onReset={() => setMainAdminTab("estates")}>
+        <CrmWorkspace />
+      </AdminErrorBoundary>
+    ) : null}
       </main>
 
       {/* Full Property Customizer Modal (Make ALL fields customizable) */}

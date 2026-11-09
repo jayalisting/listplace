@@ -41,7 +41,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
-import "@/app/crm.css"
 import {
   CrmState,
   CrmProperty,
@@ -218,6 +217,17 @@ export default function CrmWorkspace() {
       const res = await fetch("/api/crm/db")
       const data = await res.json()
       setDb({
+        people: Array.isArray(data?.people) ? data.people : [],
+        props: Array.isArray(data?.props) ? data.props : [],
+        tasks: Array.isArray(data?.tasks) ? data.tasks : [],
+        files: Array.isArray(data?.files) ? data.files : [],
+        trash: Array.isArray(data?.trash) ? data.trash : [],
+        settings: data?.settings || { followupRules: {}, whatsappTemplates: [], savedViews: [] },
+        version: typeof data?.version === "number" ? data.version : 1,
+      })
+    } catch (err) {
+      console.error("Failed to load CRM state:", err)
+      setDb({
         people: [],
         props: [],
         tasks: [],
@@ -225,10 +235,7 @@ export default function CrmWorkspace() {
         trash: [],
         settings: { followupRules: {}, whatsappTemplates: [], savedViews: [] },
         version: 1,
-        ...data,
       })
-    } catch (err) {
-      console.error("Failed to load CRM state:", err)
     }
   }
 
@@ -299,10 +306,11 @@ export default function CrmWorkspace() {
     setNav({ screen, id })
   }
 
-  const getPerson = (id: string | undefined) => db.people.find((x) => x.id === id)
-  const getProp = (id: string | undefined) => db.props.find((x) => x.id === id)
+  const getPerson = (id: string | undefined) => (db?.people || []).find((x) => x.id === id)
+  const getProp = (id: string | undefined) => (db?.props || []).find((x) => x.id === id)
 
-  const checkAlert = (p: CrmProperty): string => {
+  const checkAlert = (p: CrmProperty | undefined): string => {
+    if (!p) return ""
     if (["Sold", "Dropped"].includes(p.status)) return ""
     if (!p.nextDate) return "No next action set"
     if (p.nextDate < todayStr()) return `Next action overdue (${p.nextDate})`
@@ -406,7 +414,7 @@ export default function CrmWorkspace() {
         return d
       })
     } else {
-      const nextIdNum = 1 + Math.max(0, ...db.props.map((p) => parseInt(p.id.replace(/\D/g, "") || "0", 10)))
+      const nextIdNum = 1 + Math.max(0, ...(db?.props || []).map((p) => parseInt(String(p?.id || "").replace(/\D/g, "") || "0", 10)))
       const pid = `PROP-${String(nextIdNum).padStart(4, "0")}`
       const personId = uid()
       updateState((d) => {
@@ -448,9 +456,9 @@ export default function CrmWorkspace() {
   }
 
   // ── Work Schedules ────────────────────────────────────────────────────────
-  const openTasks = db.tasks
-    .filter((x) => !x.done)
-    .sort((a, b) => (a.due || "9999").localeCompare(b.due || "9999") || (a.time || "99:99").localeCompare(b.time || "99:99"))
+  const openTasks = (db?.tasks || [])
+    .filter((x) => x && !x.done)
+    .sort((a, b) => String(a?.due || "9999").localeCompare(String(b?.due || "9999")) || String(a?.time || "99:99").localeCompare(String(b?.time || "99:99")))
 
   const t0 = todayStr()
 
@@ -612,7 +620,7 @@ export default function CrmWorkspace() {
                   <div key={p.id} className="flex items-center justify-between p-2.5 border rounded-xl">
                     <div>
                       <span className="font-bold text-sm cursor-pointer" onClick={() => navigateTo("person", p.id)}>{p.name}</span>
-                      <span className="text-xs text-slate-500 ml-2">({p.roles.join(", ")})</span>
+                      <span className="text-xs text-slate-500 ml-2">({(p.roles || []).join(", ")})</span>
                     </div>
                     {p.phone && (
                       <div className="flex items-center gap-2">
@@ -1447,7 +1455,7 @@ export default function CrmWorkspace() {
                         )}
                       </div>
                       <div className="text-xs text-slate-500 mt-1">
-                        Roles: {person.roles.join(", ")} · 📍 {person.village || "Location not specified"}
+                        Roles: {(person.roles || []).join(", ")} · 📍 {person.village || "Location not specified"}
                       </div>
                     </div>
 
@@ -1502,7 +1510,7 @@ export default function CrmWorkspace() {
                     ← All People & Leads
                   </button>
                   <h1 className="text-2xl font-black mt-1 text-gray-900 dark:text-white">{person.name}</h1>
-                  <div className="text-xs text-slate-500 mt-1">Roles: {person.roles.join(", ")}</div>
+                  <div className="text-xs text-slate-500 mt-1">Roles: {(person.roles || []).join(", ")}</div>
                 </div>
                 {person.phone && (
                   <div className="flex items-center gap-2">
@@ -1745,3 +1753,4 @@ export default function CrmWorkspace() {
     </div>
   )
 }
+

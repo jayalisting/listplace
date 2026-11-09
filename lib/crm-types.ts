@@ -143,3 +143,4 @@ export interface CrmState {
   settings: CrmSettings
   version: number
 }
+
