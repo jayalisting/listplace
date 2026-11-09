@@ -9,8 +9,46 @@ export const revalidate = 0
 // Avoids repeated inference/generation compute when input hasn't changed
 const aiDraftCache = new Map<string, { data: any; createdAt: number }>()
 
+// In-memory sliding rate limiter: max 15 requests per minute per IP
+const aiRateLimitMap = new Map<string, { count: number; expiresAt: number }>()
+
+function isAiRateLimited(ip: string): boolean {
+  const now = Date.now()
+  const entry = aiRateLimitMap.get(ip)
+
+  if (!entry || entry.expiresAt < now) {
+    aiRateLimitMap.set(ip, { count: 1, expiresAt: now + 60 * 1000 })
+    return false
+  }
+
+  if (entry.count >= 15) {
+    return true
+  }
+
+  entry.count += 1
+  return false
+}
+
 export async function POST(req: NextRequest) {
   try {
+    const ip = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "anonymous"
+
+    if (isAiRateLimited(ip)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Too many AI drafting requests. Please wait a minute before requesting more suggestions.",
+        },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": "60",
+            "Cache-Control": "no-store",
+          },
+        }
+      )
+    }
+
     const context = await req.json().catch(() => ({}))
 
     // 1. Calculate input hash of context fields

@@ -1476,33 +1476,145 @@ export async function getAllImageSeoRecords(): Promise<ImageSeoData[]> {
 }
 
 /**
- * Archive historical completed/cancelled VIP bookings older than N months into compressed archive
+ * Phase 7: Retention & Housekeeping
+ * Archive historical completed/cancelled VIP bookings older than N months into compressed archive.
+ * Uses encodeText() to Brotli-compress notes into notes_compressed if notes > 256 bytes.
  */
 export async function archiveOldVipBookings(monthsOld = 3): Promise<number> {
   await initializeDatabase()
   const client = await pool.connect()
   try {
-    const res = await client.query(
+    await client.query("BEGIN")
+
+    const selectRes = await client.query(
       `
-      WITH moved AS (
-        DELETE FROM vip_tour_bookings
-        WHERE status IN ('completed', 'cancelled')
-          AND created_at < NOW() - ($1 || ' months')::INTERVAL
-        RETURNING *
-      )
-      INSERT INTO vip_tour_bookings_archive (
-        id, property_id, tour_type, tour_date, tour_time,
-        client_name, client_phone, client_email, status_code, status, notes, notes_compressed, created_at
-      )
-      SELECT 
-        id, property_id, tour_type, tour_date, tour_time,
-        client_name, client_phone, client_email, status_code, status, notes, NULL, created_at
-      FROM moved
-      RETURNING id;
+      SELECT id, property_id, property_title, property_price, property_location,
+             tour_type, tour_date, tour_time, client_name, client_phone, client_email,
+             status, notes, created_at
+      FROM vip_tour_bookings
+      WHERE status IN ('completed', 'cancelled')
+        AND created_at < NOW() - ($1 || ' months')::INTERVAL
+      FOR UPDATE;
       `,
       [monthsOld]
     )
+
+    if (selectRes.rows.length === 0) {
+      await client.query("COMMIT")
+      return 0
+    }
+
+    for (const row of selectRes.rows) {
+      let notesCompressed: Buffer | null = null
+      let notesPlain: string | null = row.notes
+
+      if (row.notes && row.notes.length > 256) {
+        notesCompressed = encodeText(row.notes)
+        notesPlain = null
+      }
+
+      await client.query(
+        `
+        INSERT INTO vip_tour_bookings_archive (
+          id, property_id, property_title, property_price, property_location,
+          tour_type, tour_date, tour_time, client_name, client_phone, client_email,
+          status, notes, notes_compressed, created_at, archived_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW())
+        ON CONFLICT (id) DO NOTHING;
+        `,
+        [
+          row.id,
+          row.property_id,
+          row.property_title,
+          row.property_price,
+          row.property_location,
+          row.tour_type,
+          row.tour_date,
+          row.tour_time,
+          row.client_name,
+          row.client_phone,
+          row.client_email,
+          row.status,
+          notesPlain,
+          notesCompressed,
+          row.created_at,
+        ]
+      )
+    }
+
+    const ids = selectRes.rows.map((r: any) => r.id)
+    await client.query(
+      "DELETE FROM vip_tour_bookings WHERE id = ANY($1::int[]);",
+      [ids]
+    )
+
+    await client.query("COMMIT")
+    return ids.length
+  } catch (err) {
+    await client.query("ROLLBACK")
+    throw err
+  } finally {
+    client.release()
+  }
+}
+
+/**
+ * Phase 7: Retention & Housekeeping
+ * Clean up expired/exhausted or revoked VIP share tokens older than N days.
+ */
+export async function cleanupExpiredVipTokens(daysOld = 30): Promise<number> {
+  await initializeDatabase()
+  const client = await pool.connect()
+  try {
+    const res = await client.query(
+      `
+      DELETE FROM vip_share_tokens
+      WHERE (status = 'revoked' OR (max_views IS NOT NULL AND max_views > 0 AND view_count >= max_views))
+        AND COALESCE(last_viewed_at, created_at) < NOW() - ($1 || ' days')::INTERVAL
+      RETURNING id;
+      `,
+      [daysOld]
+    )
     return res.rowCount ?? 0
+  } finally {
+    client.release()
+  }
+}
+
+/**
+ * Phase 7: Retention & Housekeeping
+ * Fetch table sizes, row counts, and storage metrics for admin maintenance.
+ */
+export async function getDatabaseRetentionStats(): Promise<any> {
+  await initializeDatabase()
+  const client = await pool.connect()
+  try {
+    const bookingsCount = await client.query("SELECT COUNT(*)::int as count FROM vip_tour_bookings;")
+    const archiveCount = await client.query("SELECT COUNT(*)::int as count FROM vip_tour_bookings_archive;").catch(() => ({ rows: [{ count: 0 }] }))
+    const tokensCount = await client.query("SELECT COUNT(*)::int as count FROM vip_share_tokens;")
+    const expiredTokensCount = await client.query(
+      "SELECT COUNT(*)::int as count FROM vip_share_tokens WHERE status = 'revoked' OR (max_views IS NOT NULL AND max_views > 0 AND view_count >= max_views);"
+    )
+    const tableSizes = await client.query(`
+        SELECT 
+          relname AS table_name,
+          pg_size_pretty(pg_total_relation_size(c.oid)) AS total_size,
+          pg_total_relation_size(c.oid)::bigint AS total_bytes,
+          pg_size_pretty(pg_relation_size(c.oid)) AS table_size,
+          pg_size_pretty(pg_indexes_size(c.oid)) AS index_size
+        FROM pg_class c
+        LEFT JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE relkind = 'r' AND n.nspname = 'public'
+        ORDER BY pg_total_relation_size(c.oid) DESC;
+      `)
+
+    return {
+      activeBookings: bookingsCount.rows[0]?.count ?? 0,
+      archivedBookings: archiveCount.rows[0]?.count ?? 0,
+      activeTokens: tokensCount.rows[0]?.count ?? 0,
+      expiredTokens: expiredTokensCount.rows[0]?.count ?? 0,
+      tables: tableSizes.rows,
+    }
   } finally {
     client.release()
   }
