@@ -2,6 +2,7 @@ import { Pool } from "pg"
 import crypto from "crypto"
 import { LUXURY_PROPERTIES, LuxuryProperty } from "./luxury-properties"
 import { ImageSeoData, ImageSeoSettings, DEFAULT_IMAGE_SEO_SETTINGS, createDefaultImageSeo } from "./image-seo"
+import { calculateImageSeoScore } from "./image-seo-scoring"
 import { encodeJson, decodeJson, encodeText, decodeText } from "./compress"
 
 // Global pool instance to prevent connection exhaustion in Next.js hot reload / serverless
@@ -1402,7 +1403,8 @@ export async function saveImageSeoRecord(data: ImageSeoData): Promise<ImageSeoDa
       updatedAt: new Date().toISOString(),
     }
     const urlHash = crypto.createHash("sha256").update(data.url).digest()
-    const scoreVal = typeof data.score === "number" ? Math.round(data.score) : 0
+    // Recompute score strictly on save using pure scoring function (Phase 6)
+    const scoreVal = Math.round(calculateImageSeoScore(data).totalScore)
 
     // Delta storage: omit redundant defaults that match global settings
     const settings = await getImageSeoSettings()

@@ -19,23 +19,30 @@ const GMAIL_USER = process.env.GMAIL_USER || "jayalisting@gmail.com"
 const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD || ""
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://jayalisting.com"
 
+// Singleton pooled Nodemailer transporter to eliminate connection handshake overhead on repeat bookings
+let pooledTransporter: nodemailer.Transporter | null = null
+
 /**
- * Creates an authenticated Nodemailer transporter for Gmail SMTP
+ * Returns a shared, pooled Nodemailer transporter for Gmail SMTP
  */
-function createTransporter() {
-  return nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 465,
-    secure: true, // SSL
-    auth: {
-      user: GMAIL_USER,
-      pass: GMAIL_APP_PASSWORD.replace(/\s+/g, ""), // strip any spaces
-    },
-    // Pool connections to avoid opening too many sockets
-    pool: true,
-    maxConnections: 3,
-    maxMessages: 100,
-  })
+function getPooledTransporter(): nodemailer.Transporter {
+  if (!pooledTransporter) {
+    pooledTransporter = nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true, // SSL
+      auth: {
+        user: GMAIL_USER,
+        pass: GMAIL_APP_PASSWORD.replace(/\s+/g, ""), // strip any spaces
+      },
+      // Pool connections to avoid opening too many sockets
+      pool: true,
+      maxConnections: 3,
+      maxMessages: 100,
+      idleTimeout: 30000,
+    })
+  }
+  return pooledTransporter
 }
 
 /**
@@ -52,7 +59,7 @@ function formatPhoneForWhatsApp(raw: string): string {
  */
 export async function sendVipTourNotificationEmail(booking: VipTourBookingData): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
-    const transporter = createTransporter()
+    const transporter = getPooledTransporter()
 
     const waPhone = formatPhoneForWhatsApp(booking.clientPhone)
     const propertyUrl = `${SITE_URL}/property/${booking.propertyId}`

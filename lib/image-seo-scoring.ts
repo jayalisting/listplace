@@ -1,4 +1,4 @@
-import { ImageSeoData } from "./image-seo"
+import type { ImageSeoData } from "./image-seo"
 
 export interface ScoreItem {
   id: string

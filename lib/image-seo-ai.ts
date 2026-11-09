@@ -1,4 +1,4 @@
-import { ImageSeoData, ImageType } from "./image-seo"
+import type { ImageSeoData, ImageType } from "./image-seo"
 
 export interface AiSuggestionContext {
   propertyTitle?: string

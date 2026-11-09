@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import {
   X,
   Sparkles,
@@ -58,6 +58,7 @@ export default function ImageSeoModal({
   const [isSuggesting, setIsSuggesting] = useState(false)
   const [saveStatus, setSaveStatus] = useState<string | null>(null)
   const [scoreResult, setScoreResult] = useState<ScoreResult>(() => calculateImageSeoScore(formData))
+  const lastDraftPayloadRef = useRef<string>("")
 
   // Fetch existing record if present
   useEffect(() => {
@@ -121,30 +122,42 @@ export default function ImageSeoModal({
     }))
   }
 
-  // "Suggest with AI" Handler
+  // "Suggest with AI" Handler - Only on explicit user button click with input hash caching
   const handleAiSuggest = async () => {
+    const payload = JSON.stringify({
+      propertyTitle: propertyContext?.title || formData.title,
+      propertyLocation: propertyContext?.location || formData.location?.city,
+      propertyCategory: propertyContext?.category,
+      propertyPrice: propertyContext?.price,
+      existingFileName: formData.seoFileName,
+      imageType: formData.imageType,
+    })
+
+    if (lastDraftPayloadRef.current === payload) {
+      setSaveStatus("AI draft recommendations are already up-to-date with this asset context.")
+      return
+    }
+
     setIsSuggesting(true)
     try {
       const res = await fetch("/api/image-seo/suggest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          propertyTitle: propertyContext?.title || formData.title,
-          propertyLocation: propertyContext?.location || formData.location?.city,
-          propertyCategory: propertyContext?.category,
-          propertyPrice: propertyContext?.price,
-          existingFileName: formData.seoFileName,
-          imageType: formData.imageType,
-        }),
+        body: payload,
       })
       const result = await res.json()
       if (result.success && result.data) {
+        lastDraftPayloadRef.current = payload
         setFormData((prev) => ({
           ...prev,
           ...result.data,
           url: prev.url, // preserve URL
         }))
-        setSaveStatus("AI drafted recommendations applied for review! Click 'Save' to confirm.")
+        setSaveStatus(
+          result.cached
+            ? "AI draft loaded from cache (zero inference cost). Click 'Save' to confirm."
+            : "AI drafted recommendations applied for review! Click 'Save' to confirm."
+        )
       }
     } catch (e: any) {
       alert("AI suggestion failed: " + e.message)

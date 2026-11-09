@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextRequest, NextResponse, after } from "next/server"
 import { createDbVipTourBooking, getDbVipTourBookings } from "@/lib/db"
 import { sendVipTourNotificationEmail } from "@/lib/email"
 import { verifyAdminRequest } from "@/lib/admin-auth"
@@ -127,22 +127,27 @@ export async function POST(req: NextRequest) {
       notes,
     })
 
-    // 4. Send email notification to jayalisting@gmail.com asynchronously
-    sendVipTourNotificationEmail({
-      id: savedBooking.id,
-      propertyId,
-      propertyTitle,
-      propertyPrice,
-      propertyLocation,
-      tourType,
-      tourDate,
-      tourTime: tourTime || "11:00 AM",
-      clientName,
-      clientPhone,
-      clientEmail,
-      notes,
-    }).catch((err) => {
-      console.error("Non-blocking background email dispatch error:", err)
+    // 4. Send email notification in the background using after() from next/server
+    // This allows the HTTP response to return immediately without blocking on SMTP socket/handshake
+    after(async () => {
+      try {
+        await sendVipTourNotificationEmail({
+          id: savedBooking.id,
+          propertyId,
+          propertyTitle,
+          propertyPrice,
+          propertyLocation,
+          tourType,
+          tourDate,
+          tourTime: tourTime || "11:00 AM",
+          clientName,
+          clientPhone,
+          clientEmail,
+          notes,
+        })
+      } catch (err) {
+        console.error("Background email dispatch notice via after():", err)
+      }
     })
 
     return NextResponse.json(
