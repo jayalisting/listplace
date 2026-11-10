@@ -334,7 +334,7 @@ ${activeVipUrl}
                   <span>Single-Use Private VIP Protocol (1 Person / 1 Open)</span>
                 </div>
                 <p className="text-[11px] text-stone-600 dark:text-stone-400 leading-relaxed">
-                  Generate an exclusive private VIP link for 1 person. <strong>The recipient can open the link once; after first access, it is automatically disabled and locked</strong> to safeguard confidential title documents.
+                  Generate an exclusive private VIP link for 1 person. <strong>The recipient can open the link once; after first access, it is automatically disabled and locked</strong>. Includes real-time <strong>Anti-Screenshot &amp; Screen Snipping Protection</strong> with forensic watermarking.
                 </p>
               </div>
 

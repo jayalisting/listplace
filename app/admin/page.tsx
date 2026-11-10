@@ -62,6 +62,7 @@ import PropertyShareModal from "@/components/property-share-modal"
 import AdminImageSeoManager from "@/components/admin-image-seo-manager"
 import AdminDatabaseMonitor from "@/components/admin-database-monitor"
 import AdminErrorBoundary from "@/components/admin-error-boundary"
+import WhatsAppIcon from "@/components/whatsapp-icon"
 
 export default function AdminPage() {
   const [properties, setProperties] = useState<LuxuryProperty[]>([])
@@ -929,10 +930,10 @@ export default function AdminPage() {
     <div className="min-h-screen bg-slate-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 transition-colors duration-300">
       {/* Royal Red Maroon Admin Header */}
       <header className="bg-gradient-to-r from-rose-950 via-red-900 to-slate-950 text-white shadow-xl border-b border-rose-800/40 sticky top-0 z-40">
-        <div className="container mx-auto px-4 py-3.5 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center space-x-3">
-            <Link href="/" className="flex items-center space-x-2.5 group">
-              <div className="relative w-10 h-10 flex-shrink-0">
+        <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-3.5 flex items-center justify-between gap-2 sm:gap-3">
+          <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
+            <Link href="/" className="flex items-center space-x-2 sm:space-x-2.5 group min-w-0">
+              <div className="relative w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0">
                 <Image
                   src="/logo.png"
                   alt="JayaListing Royal Emblem"
@@ -941,23 +942,23 @@ export default function AdminPage() {
                   className="w-full h-full object-contain filter drop-shadow-[0_2px_8px_rgba(245,158,11,0.3)] transition-transform duration-300 group-hover:scale-105"
                 />
               </div>
-              <div>
-                <div className="text-lg font-black tracking-tight flex items-center space-x-2">
-                  <span>JayaListing Admin</span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-200 border border-amber-400/30">
-                    PostgreSQL Suite
+              <div className="min-w-0">
+                <div className="text-base sm:text-lg font-black tracking-tight flex items-center space-x-1.5 sm:space-x-2 truncate">
+                  <span className="truncate">JayaListing Admin</span>
+                  <span className="text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-200 border border-amber-400/30 flex-shrink-0">
+                    PostgreSQL
                   </span>
                 </div>
-                <div className="text-[9px] tracking-widest uppercase font-semibold text-rose-300">
+                <div className="text-[8px] sm:text-[9px] tracking-widest uppercase font-semibold text-rose-300 hidden sm:block">
                   Estate Database Controller
                 </div>
               </div>
             </Link>
           </div>
 
-          <div className="flex items-center space-x-3 text-xs">
+          <div className="flex items-center space-x-1.5 sm:space-x-3 text-xs flex-shrink-0">
             {/* Live Database Status Indicator */}
-            <div className="flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-black/40 border border-rose-700/60 backdrop-blur-md">
+            <div className="hidden lg:flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-black/40 border border-rose-700/60 backdrop-blur-md">
               <Database className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
               <span className="text-emerald-300 font-bold">
                 {dbConnected ? "PostgreSQL Connected (grolow_db)" : "Connecting to PostgreSQL..."}
@@ -966,131 +967,130 @@ export default function AdminPage() {
 
             <Link
               href="/"
-              className="inline-flex items-center px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold transition-colors"
+              className="inline-flex items-center px-2.5 sm:px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold transition-colors text-[11px] sm:text-xs"
             >
-              <ExternalLink className="w-3.5 h-3.5 mr-1" />
-              <span>Live Website</span>
+              <ExternalLink className="w-3.5 h-3.5 sm:mr-1" />
+              <span className="hidden sm:inline">Live Website</span>
             </Link>
 
             <button
               onClick={handleAdminLogout}
               disabled={isLoggingOut}
-              className="inline-flex items-center px-3.5 py-1.5 rounded-xl bg-red-950/80 hover:bg-red-900 border border-red-500/50 text-rose-200 font-bold transition-all shadow-sm cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center px-2.5 sm:px-3.5 py-1.5 rounded-xl bg-red-950/80 hover:bg-red-900 border border-red-500/50 text-rose-200 font-bold transition-all shadow-sm cursor-pointer disabled:opacity-50 text-[11px] sm:text-xs"
               title="End Administrator Session & Lock Controller"
             >
-              <Lock className="w-3.5 h-3.5 mr-1.5 text-amber-400" />
-              <span>{isLoggingOut ? "Logging Out..." : "Log Out"}</span>
+              <Lock className="w-3.5 h-3.5 sm:mr-1.5 text-amber-400" />
+              <span>{isLoggingOut ? "..." : "Log Out"}</span>
             </button>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 max-w-7xl space-y-6">
+      <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 max-w-7xl space-y-4 sm:space-y-6">
         {/* Success / Alert Banner */}
         {actionMessage && (
-          <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-500/40 text-emerald-800 dark:text-emerald-300 text-xs font-bold flex items-center space-x-2 shadow-lg animate-fadeIn">
+          <div className="p-3 sm:p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-500/40 text-emerald-800 dark:text-emerald-300 text-xs font-bold flex items-center space-x-2 shadow-lg animate-fadeIn">
             <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
             <span>{actionMessage}</span>
           </div>
         )}
 
         {/* Database Quick Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
-          <div className="p-4 rounded-2xl bg-white dark:bg-gray-900 border border-rose-900/20 shadow-sm text-center">
-            <div className="text-[10px] uppercase font-bold text-gray-500">Total in PostgreSQL</div>
-            <div className="text-2xl font-black text-rose-900 dark:text-rose-400 mt-1">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3.5">
+          <div className="p-3 sm:p-4 rounded-2xl bg-white dark:bg-gray-900 border border-rose-900/20 shadow-sm text-center">
+            <div className="text-[10px] uppercase font-bold text-gray-500">PostgreSQL Total</div>
+            <div className="text-xl sm:text-2xl font-black text-rose-900 dark:text-rose-400 mt-0.5 sm:mt-1">
               {properties.length} Estates
             </div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-white dark:bg-gray-900 border border-blue-500/20 shadow-sm text-center">
+          <div className="p-3 sm:p-4 rounded-2xl bg-white dark:bg-gray-900 border border-blue-500/20 shadow-sm text-center">
             <div className="text-[10px] uppercase font-bold text-blue-600">1. Residential</div>
-            <div className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1">
+            <div className="text-xl sm:text-2xl font-black text-blue-600 dark:text-blue-400 mt-0.5 sm:mt-1">
               {residentialCount}
             </div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-white dark:bg-gray-900 border border-amber-500/20 shadow-sm text-center">
+          <div className="p-3 sm:p-4 rounded-2xl bg-white dark:bg-gray-900 border border-amber-500/20 shadow-sm text-center">
             <div className="text-[10px] uppercase font-bold text-amber-600">2. Commercial</div>
-            <div className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1">
+            <div className="text-xl sm:text-2xl font-black text-amber-600 dark:text-amber-400 mt-0.5 sm:mt-1">
               {commercialCount}
             </div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-white dark:bg-gray-900 border border-purple-500/20 shadow-sm text-center">
+          <div className="p-3 sm:p-4 rounded-2xl bg-white dark:bg-gray-900 border border-purple-500/20 shadow-sm text-center">
             <div className="text-[10px] uppercase font-bold text-purple-600">3. Industrial</div>
-            <div className="text-2xl font-black text-purple-600 dark:text-purple-400 mt-1">
+            <div className="text-xl sm:text-2xl font-black text-purple-600 dark:text-purple-400 mt-0.5 sm:mt-1">
               {industrialCount}
             </div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-white dark:bg-gray-900 border border-emerald-500/20 shadow-sm text-center">
+          <div className="p-3 sm:p-4 rounded-2xl bg-white dark:bg-gray-900 border border-emerald-500/20 shadow-sm text-center">
             <div className="text-[10px] uppercase font-bold text-emerald-600">4. Agricultural</div>
-            <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
+            <div className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5 sm:mt-1">
               {agricultureCount}
             </div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-white dark:bg-gray-900 border border-rose-900/20 shadow-sm text-center">
+          <div className="p-3 sm:p-4 rounded-2xl bg-white dark:bg-gray-900 border border-rose-900/20 shadow-sm text-center">
             <div className="text-[10px] uppercase font-bold text-gray-500">Portfolio Value</div>
-            <div className="text-2xl font-black text-rose-900 dark:text-rose-400 mt-1">
+            <div className="text-xl sm:text-2xl font-black text-rose-900 dark:text-rose-400 mt-0.5 sm:mt-1">
               ₹344+ Cr
             </div>
           </div>
         </div>
 
         {/* Action Header: Search & Add Property */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-gray-900 p-4 rounded-3xl border border-rose-900/20 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-gray-900 p-3 sm:p-4 rounded-3xl border border-rose-900/20 shadow-sm">
           {/* Quick Search */}
-          <div className="relative flex-1 max-w-md">
+          <div className="relative flex-1 w-full sm:max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-rose-800" />
             <Input
               placeholder="Filter by title, city, or property type..."
               value={searchFilter}
               onChange={(e) => setSearchFilter(e.target.value)}
-              className="pl-9 h-10 text-xs rounded-xl border-gray-200 dark:border-gray-800"
+              className="pl-9 h-10 text-xs rounded-xl border-gray-200 dark:border-gray-800 w-full"
             />
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex flex-wrap items-center gap-2">
+          {/* Action Buttons: Responsive Grid on Mobile, Flex on Desktop */}
+          <div className="grid grid-cols-3 sm:flex sm:items-center gap-2 w-full sm:w-auto">
             <Button
               onClick={fetchProperties}
               variant="outline"
               size="sm"
-              className="border-rose-900/30 text-rose-900 dark:text-rose-300 hover:bg-rose-50 rounded-xl text-xs font-bold h-9"
+              className="border-rose-900/30 text-rose-900 dark:text-rose-300 hover:bg-rose-50 rounded-xl text-xs font-bold h-10 px-2 sm:px-3 justify-center"
               disabled={loading}
             >
-              <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? "animate-spin" : ""}`} />
-              Refresh
+              <RefreshCw className={`w-3.5 h-3.5 mr-1 sm:mr-1.5 ${loading ? "animate-spin" : ""}`} />
+              <span>Refresh</span>
             </Button>
 
             <Button
               onClick={handleResetDatabase}
               variant="outline"
               size="sm"
-              className="border-amber-500/40 text-amber-700 dark:text-amber-400 hover:bg-amber-50 rounded-xl text-xs font-bold h-9"
+              className="border-amber-500/40 text-amber-700 dark:text-amber-400 hover:bg-amber-50 rounded-xl text-xs font-bold h-10 px-2 sm:px-3 justify-center"
               disabled={isResetting}
             >
-              <RotateCcw className={`w-3.5 h-3.5 mr-1.5 ${isResetting ? "animate-spin" : ""}`} />
-              {isResetting ? "Restoring..." : "Restore Defaults"}
+              <RotateCcw className={`w-3.5 h-3.5 mr-1 sm:mr-1.5 ${isResetting ? "animate-spin" : ""}`} />
+              <span className="truncate">Restore</span>
             </Button>
 
-
-
-            <Link href="/add-listing">
+            <Link href="/add-listing" className="col-span-1 sm:col-auto">
               <Button
-                className="bg-gradient-to-r from-rose-900 via-red-800 to-rose-950 hover:from-rose-950 text-white rounded-xl text-xs font-bold shadow-md shadow-rose-900/30 border border-amber-400/20 h-9 px-4"
+                className="w-full bg-gradient-to-r from-rose-900 via-red-800 to-rose-950 hover:from-rose-950 text-white rounded-xl text-xs font-bold shadow-md shadow-rose-900/30 border border-amber-400/20 h-10 px-2 sm:px-4 justify-center"
               >
-                <Plus className="w-4 h-4 mr-1.5" />
-                + Add New Listing
+                <Plus className="w-4 h-4 mr-1 sm:mr-1.5" />
+                <span className="truncate">+ Add</span>
+                <span className="hidden sm:inline">&nbsp;Listing</span>
               </Button>
             </Link>
           </div>
         </div>
 
         {/* Top-Level Navigation Switcher */}
-        <div className="flex items-center space-x-2 overflow-x-auto scrollbar-none pb-3 border-b border-gray-200 dark:border-gray-800">
+        <div className="flex items-center space-x-2 overflow-x-auto scrollbar-none pb-2 border-b border-gray-200 dark:border-gray-800 -mx-3 px-3 sm:mx-0 sm:px-0">
           <button
             onClick={() => setMainAdminTab("estates")}
             className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold flex items-center space-x-2 whitespace-nowrap flex-shrink-0 transition-all ${
@@ -1297,15 +1297,161 @@ export default function AdminPage() {
                 </div>
 
                 {/* Right: Price & Admin Actions */}
-                <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto space-x-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-100 dark:border-gray-800 flex-wrap gap-y-2">
-                  <div className="text-right mr-1">
-                    <div className="text-base sm:text-lg font-black text-rose-900 dark:text-rose-400">
-                      {item.price}
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between md:justify-end w-full md:w-auto gap-3 pt-3 md:pt-0 border-t md:border-t-0 border-gray-100 dark:border-gray-800">
+                  <div className="flex items-center justify-between w-full md:w-auto md:text-right md:mr-2">
+                    <div>
+                      <div className="text-base sm:text-lg font-black text-rose-900 dark:text-rose-400">
+                        {item.price}
+                      </div>
+                      <div className="text-[10px] text-gray-400">{item.status}</div>
                     </div>
-                    <div className="text-[10px] text-gray-400">{item.status}</div>
                   </div>
 
-                  <div className="flex items-center space-x-1.5 flex-wrap gap-y-1">
+                  {/* Mobile & Small Screen Action Toolbar */}
+                  <div className="flex flex-col gap-2 w-full md:hidden">
+                    {/* Row 1: Primary Touch-Friendly Actions */}
+                    <div className="grid grid-cols-3 gap-1.5 w-full">
+                      <Button
+                        onClick={() => handleOpenEditProperty(item)}
+                        size="sm"
+                        className="h-10 text-xs font-bold rounded-xl bg-rose-50 text-rose-950 border border-rose-900/40 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-200 justify-center shadow-xs"
+                      >
+                        <Edit className="w-3.5 h-3.5 mr-1 text-rose-800 dark:text-rose-400" />
+                        Edit
+                      </Button>
+
+                      <Button
+                        onClick={() => setSharingAdminProp(item)}
+                        size="sm"
+                        variant="outline"
+                        className="h-10 text-xs font-bold rounded-xl border-amber-500/50 text-amber-900 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/30 justify-center shadow-xs"
+                      >
+                        <Share2 className="w-3.5 h-3.5 mr-1 text-amber-600" />
+                        Share
+                      </Button>
+
+                      <Link href={`/property/${item.id}${item.visibility === "private" ? "?access=private_vip" : ""}`} target="_blank" className="w-full">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="w-full h-10 text-xs font-bold rounded-xl border-rose-900/30 text-rose-900 dark:text-rose-300 hover:bg-rose-50 justify-center"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5 mr-1" />
+                          View
+                        </Button>
+                      </Link>
+                    </div>
+
+                    {/* Row 2: Secondary Quick Toggles */}
+                    <div className="flex items-center justify-between gap-1 w-full pt-1.5 border-t border-gray-100 dark:border-gray-800">
+                      {/* Priority Up/Down */}
+                      <div className="flex items-center space-x-0.5 border border-gray-200 dark:border-gray-700 rounded-xl p-0.5 bg-white dark:bg-gray-800 shadow-xs">
+                        <button
+                          type="button"
+                          onClick={() => handleQuickReorder(item, Math.max(1, (item.displayOrder ?? 100) - 1))}
+                          className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
+                          title="Move up"
+                        >
+                          <ArrowUp className="w-3.5 h-3.5" />
+                        </button>
+                        <span className="text-[10px] font-mono font-bold px-1 text-gray-600 dark:text-gray-300">
+                          #{item.displayOrder ?? 100}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleQuickReorder(item, (item.displayOrder ?? 100) + 1)}
+                          className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
+                          title="Move down"
+                        >
+                          <ArrowDown className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      {/* Pin to Home */}
+                      <button
+                        type="button"
+                        onClick={() => handleQuickReorder(item, item.featuredHome ? 100 : 1, !item.featuredHome)}
+                        className={`h-9 px-2 rounded-xl border text-xs font-bold transition-all flex items-center gap-1 ${
+                          item.featuredHome
+                            ? "bg-amber-400 text-slate-950 border-amber-500 shadow-xs"
+                            : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700"
+                        }`}
+                        title={item.featuredHome ? "Pinned on Home" : "Pin to Home"}
+                      >
+                        <Star className={`w-3.5 h-3.5 ${item.featuredHome ? "fill-slate-950" : ""}`} />
+                        <span className="text-[10px]">{item.featuredHome ? "Pinned" : "Pin"}</span>
+                      </button>
+
+                      {/* Quick Public / Private Toggle */}
+                      <button
+                        type="button"
+                        onClick={() => handleToggleTableVisibility(item)}
+                        disabled={togglingVisibilityId === item.id}
+                        className={`h-9 px-2 rounded-xl border text-[11px] font-bold transition-all flex items-center gap-1 ${
+                          item.visibility === "private"
+                            ? "bg-amber-50 text-amber-900 border-amber-300 dark:bg-amber-950/30 dark:text-amber-300"
+                            : "bg-stone-50 text-stone-700 border-stone-200 dark:bg-gray-800 dark:text-gray-300"
+                        }`}
+                        title={item.visibility === "private" ? "Click to make Public" : "Click to make Private VIP"}
+                      >
+                        {item.visibility === "private" ? (
+                          <Globe className="w-3.5 h-3.5 text-emerald-600" />
+                        ) : (
+                          <Lock className="w-3.5 h-3.5 text-amber-600" />
+                        )}
+                        <span className="text-[10px]">{item.visibility === "private" ? "Public" : "Private"}</span>
+                      </button>
+
+                      {/* Amenities Editor Trigger */}
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditAmenities(item)}
+                        className={`h-9 px-2 rounded-xl border text-[11px] font-bold transition-all flex items-center gap-1 ${
+                          editingAmenitiesId === item.id
+                            ? "bg-rose-900 text-white border-rose-900"
+                            : "border-amber-400/50 text-amber-800 dark:text-amber-300 bg-white dark:bg-gray-800"
+                        }`}
+                      >
+                        <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                        <span className="text-[10px]">({((item.amenities && item.amenities.length > 0) ? item.amenities : (item.highlights || [])).length})</span>
+                      </button>
+
+                      {/* Delete */}
+                      {confirmDeleteId === item.id ? (
+                        <div className="flex items-center space-x-1">
+                          <Button
+                            onClick={() => executeDelete(item.id, item.title)}
+                            disabled={isDeletingId === item.id}
+                            size="sm"
+                            className="bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold h-9 px-2 rounded-xl"
+                          >
+                            Confirm
+                          </Button>
+                          <Button
+                            onClick={() => setConfirmDeleteId(null)}
+                            size="sm"
+                            variant="ghost"
+                            className="text-gray-400 text-xs h-9 px-1.5"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          onClick={() => setConfirmDeleteId(item.id)}
+                          size="sm"
+                          variant="outline"
+                          className="border-red-200 text-red-600 hover:bg-red-50 text-xs font-bold h-9 px-2 rounded-xl"
+                          title="Delete Property"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Desktop Actions Toolbar */}
+                  <div className="hidden md:flex items-center space-x-1.5 flex-wrap gap-y-1">
                     {/* Priority & Move Up/Down Controls */}
                     <div className="flex items-center space-x-0.5 border border-gray-200 dark:border-gray-700 rounded-xl p-0.5 bg-white dark:bg-gray-800 shadow-xs">
                       <button
@@ -1792,33 +1938,35 @@ export default function AdminPage() {
                         <span>Received: {b.tour_date} • {b.tour_time}</span>
                       </div>
 
-                      {/* Client Contact Links */}
-                      <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-gray-200 dark:border-gray-700">
+                      {/* Client Contact Links: 2-column grid on mobile, flex on desktop */}
+                      <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
                         <a
                           href={`https://wa.me/${waPhone}?text=Hello%20${encodeURIComponent(b.client_name || "")},%20thank%20you%20for%20your%20enquiry%20regarding%20${encodeURIComponent(b.property_title || "")}%20on%20JayaListing.`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#25D366] hover:bg-[#20ba59] text-white font-bold text-[11px] transition-colors shadow-xs"
+                          className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-white font-bold text-xs transition-colors shadow-xs"
                         >
-                          <MessageCircle className="w-3.5 h-3.5" />
+                          <WhatsAppIcon className="w-3.5 h-3.5 text-white shrink-0" />
                           <span>WhatsApp</span>
                         </a>
 
                         <a
                           href={`tel:${String(b.client_phone || "").replace(/\s+/g, "")}`}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 hover:bg-gray-100 text-gray-900 dark:text-white font-bold text-[11px] transition-colors"
+                          className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 hover:bg-gray-100 text-gray-900 dark:text-white font-bold text-xs transition-colors"
                         >
-                          <Phone className="w-3.5 h-3.5 text-rose-900" />
-                          <span>{b.client_phone || "No Phone"}</span>
+                          <Phone className="w-3.5 h-3.5 text-rose-900 shrink-0" />
+                          <span className="truncate">{b.client_phone || "Call Lead"}</span>
                         </a>
 
-                        <a
-                          href={`mailto:${b.client_email || ""}`}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 hover:bg-gray-100 text-gray-900 dark:text-white font-bold text-[11px] transition-colors"
-                        >
-                          <Mail className="w-3.5 h-3.5 text-rose-900" />
-                          <span>{b.client_email || "No Email"}</span>
-                        </a>
+                        {b.client_email && (
+                          <a
+                            href={`mailto:${b.client_email}`}
+                            className="col-span-2 sm:col-auto inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 hover:bg-gray-100 text-gray-900 dark:text-white font-bold text-xs transition-colors"
+                          >
+                            <Mail className="w-3.5 h-3.5 text-rose-900 shrink-0" />
+                            <span className="truncate">{b.client_email}</span>
+                          </a>
+                        )}
                       </div>
 
                       {b.notes && (

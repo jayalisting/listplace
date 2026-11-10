@@ -44,6 +44,7 @@ import {
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import WhatsAppIcon from "./whatsapp-icon"
+import PrivateScreenshotGuard from "./private-screenshot-guard"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -533,28 +534,43 @@ export default function PropertyDetailsClient({
     </div>
   )
 
-  return (
-    <div className="min-h-screen bg-slate-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 transition-colors duration-300">
-      {/* Header */}
-      <PropertyHeader />
+  const isPrivateLink = Boolean(
+    property.visibility === "private" ||
+    hasVipAccess ||
+    (mounted && typeof window !== "undefined" && (new URLSearchParams(window.location.search).has("vip_token") || new URLSearchParams(window.location.search).get("access") === "private_vip"))
+  )
 
-      {/* Private Confidential VIP Banner if Private Listing or VIP Access */}
-      {mounted && (property.visibility === "private" || hasVipAccess) && (
-        <div className="bg-gradient-to-r from-amber-950 via-stone-900 to-black text-amber-200 border-b border-amber-500/40 px-4 py-2 text-xs">
-          <div className="container mx-auto flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-              <span className="font-extrabold tracking-wide uppercase text-[11px] text-amber-300">
-                🔒 Confidential Single-Use Dossier • Active VIP Session
-                {vipClientName ? ` (${vipClientName})` : ""}
-              </span>
+  return (
+    <PrivateScreenshotGuard
+      isPrivate={isPrivateLink}
+      clientName={vipClientName}
+      propertyTitle={property.title}
+    >
+      <div className="min-h-screen bg-slate-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 transition-colors duration-300">
+        {/* Header */}
+        <PropertyHeader />
+
+        {/* Private Confidential VIP Banner if Private Listing or VIP Access */}
+        {mounted && (property.visibility === "private" || hasVipAccess) && (
+          <div className="bg-gradient-to-r from-amber-950 via-stone-900 to-black text-amber-200 border-b border-amber-500/40 px-3 sm:px-4 py-2 text-xs">
+            <div className="container mx-auto flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                <span className="font-extrabold tracking-wide uppercase text-[11px] text-amber-300">
+                  🔒 Confidential VIP Dossier • Active Session
+                  {vipClientName ? ` (${vipClientName})` : ""}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 sm:gap-3 text-[10px] text-stone-300">
+                <span className="hidden sm:inline">Private 1-person briefing</span>
+                <span className="inline-flex items-center gap-1 text-emerald-400 font-bold bg-emerald-950/70 border border-emerald-500/40 px-2 py-0.5 rounded-full">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  Anti-Screenshot Protected
+                </span>
+              </div>
             </div>
-            <span className="text-[10px] text-stone-400 hidden sm:inline">
-              Private 1-person briefing • Protected record
-            </span>
           </div>
-        </div>
-      )}
+        )}
 
       {/* Breadcrumb & Top Bar */}
       <div className="border-b border-rose-900/10 dark:border-rose-900/30 bg-white/70 dark:bg-gray-900/70 backdrop-blur-sm">
@@ -1676,5 +1692,6 @@ export default function PropertyDetailsClient({
       {/* Footer */}
       <Footer />
     </div>
+  </PrivateScreenshotGuard>
   )
 }
