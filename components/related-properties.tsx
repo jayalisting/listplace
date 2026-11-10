@@ -50,13 +50,10 @@ export default function RelatedProperties({ currentId }: { currentId?: string })
     <div className="mt-12">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <span className="text-xs uppercase font-extrabold tracking-wider text-rose-900 dark:text-rose-400">
-            Royal Portfolio
-          </span>
-          <h2 className="text-2xl font-black text-gray-900 dark:text-white">Similar Trophy Estates</h2>
+          <h2 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white">Explore Other Properties</h2>
         </div>
         <Link href="/residential" className="text-xs font-bold text-rose-900 dark:text-rose-400 hover:text-rose-800 flex items-center">
-          Browse All <ChevronRight className="w-4 h-4 ml-0.5" />
+          View All <ChevronRight className="w-4 h-4 ml-0.5" />
         </Link>
       </div>
 
