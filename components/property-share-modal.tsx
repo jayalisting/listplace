@@ -32,6 +32,42 @@ interface PropertyShareModalProps {
   isAdmin?: boolean
 }
 
+/**
+ * Resolves the public, shareable origin.
+ * Automatically normalizes Vercel preview/branch URLs (e.g. listplace-git-main-xxx.vercel.app or hash previews)
+ * to the canonical public production domain (e.g. https://listplace.vercel.app) so recipients
+ * are never intercepted by Vercel Authentication or redirected to a Vercel login screen.
+ */
+function resolveShareableOrigin(): { origin: string; isNormalized: boolean } {
+  if (typeof window === "undefined") return { origin: "", isNormalized: false }
+
+  const currentOrigin = window.location.origin
+  try {
+    const url = new URL(currentOrigin)
+    const host = url.hostname
+
+    if (host.endsWith(".vercel.app")) {
+      const firstPart = host.slice(0, -".vercel.app".length)
+
+      // Match branch deployment: <project>-git-<branch>-<scope>
+      const gitMatch = firstPart.match(/^(.+?)-git-[^.]+$/)
+      if (gitMatch) {
+        return { origin: `${url.protocol}//${gitMatch[1]}.vercel.app`, isNormalized: true }
+      }
+
+      // Match hash deployment: <project>-<hash>-<scope>
+      const hashMatch = firstPart.match(/^(.+?)-[a-z0-9]{8,}(?:-[a-z0-9_-]+)?$/i)
+      if (hashMatch) {
+        return { origin: `${url.protocol}//${hashMatch[1]}.vercel.app`, isNormalized: true }
+      }
+    }
+
+    return { origin: currentOrigin, isNormalized: false }
+  } catch {
+    return { origin: currentOrigin, isNormalized: false }
+  }
+}
+
 export default function PropertyShareModal({
   property,
   isOpen,
@@ -42,6 +78,7 @@ export default function PropertyShareModal({
   const [activeTab, setActiveTab] = useState<"public" | "private">("public")
   const [copiedType, setCopiedType] = useState<string | null>(null)
   const [origin, setOrigin] = useState("")
+  const [isNormalizedFromPreview, setIsNormalizedFromPreview] = useState(false)
 
   // Single-use VIP link generation state
   const [clientNameInput, setClientNameInput] = useState("")
@@ -53,7 +90,10 @@ export default function PropertyShareModal({
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      setOrigin(window.location.origin)
+      const resolved = resolveShareableOrigin()
+      setOrigin(resolved.origin)
+      setIsNormalizedFromPreview(resolved.isNormalized)
+
       if (propIsAdmin !== undefined) {
         setIsAdmin(propIsAdmin)
       } else {
@@ -267,6 +307,12 @@ ${activeVipUrl}
                     )}
                   </Button>
                 </div>
+                {isNormalizedFromPreview && (
+                  <div className="flex items-center gap-1.5 text-[10px] text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/40 px-2.5 py-1.5 rounded-xl mt-1">
+                    <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>Auto-converted to public production link (prevents Vercel preview login redirects)</span>
+                  </div>
+                )}
               </div>
 
               {/* WhatsApp Share Button */}
@@ -465,6 +511,19 @@ ${activeVipUrl}
               </div>
             </div>
           )}
+
+          {/* Vercel Login Redirect Guidance */}
+          <div className="pt-2 border-t border-stone-200 dark:border-gray-800">
+            <div className="p-2.5 rounded-xl bg-stone-100/80 dark:bg-gray-800/60 border border-stone-200/80 dark:border-gray-700/60 text-[11px] text-stone-600 dark:text-stone-300 space-y-1">
+              <div className="flex items-center gap-1.5 font-bold text-stone-800 dark:text-stone-200">
+                <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                <span>Link opens Vercel Login for recipients?</span>
+              </div>
+              <p className="text-[10px] text-stone-500 dark:text-stone-400 leading-normal">
+                If recipients see a Vercel login screen, go to your <strong>Vercel Dashboard &rarr; Project Settings &rarr; Deployment Protection</strong> and turn <strong>Vercel Authentication</strong> to <strong>Disabled</strong>.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
