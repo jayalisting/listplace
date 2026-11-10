@@ -34,12 +34,10 @@ const LOCATION_OPTIONS = [
 
 const PROPERTY_TYPE_OPTIONS = [
   { label: "🏢 All Types", val: "all" },
-  { label: "Luxury Residential", val: "luxury_residential" },
-  { label: "Small Commercial Building", val: "commercial_building" },
-  { label: "Large Farm Land", val: "farm_land" },
-  { label: "Mining Land", val: "mining_land" },
-  { label: "Investment Properties", val: "investment" },
-  { label: "Industrial & Logistics", val: "industrial" },
+  { label: "Commercial", val: "commercial" },
+  { label: "Agricultural", val: "agriculture" },
+  { label: "Industrial", val: "industrial" },
+  { label: "Residential", val: "residential" },
 ]
 
 export default function HomePage() {
@@ -170,6 +168,7 @@ export default function HomePage() {
             !text.includes("hotel")
           ) return false
           break
+        case "agricultural":
         case "farm_land":
         case "agriculture":
           if (
@@ -179,7 +178,8 @@ export default function HomePage() {
             !text.includes("agro") &&
             !text.includes("vineyard") &&
             !text.includes("acres") &&
-            !text.includes("agricultural")
+            !text.includes("agricultural") &&
+            !text.includes("agriculture")
           ) return false
           break
         case "mining_land":
@@ -315,13 +315,17 @@ export default function HomePage() {
 
         {/* Short & Sweet Hero Section */}
         <section className="relative bg-gradient-to-b from-stone-950 via-rose-950 to-slate-950 text-white py-3 sm:py-4 px-3 sm:px-4 border-b border-rose-900/20">
-          <div className="container mx-auto max-w-lg text-center space-y-2">
+          <div className="container mx-auto max-w-lg text-center space-y-1.5 sm:space-y-2">
             <h1 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight text-white leading-tight">
               JayaListing
               <span className="block text-amber-300 text-xs sm:text-sm md:text-base font-bold mt-0.5">
                 #1 Properties for Top People
               </span>
             </h1>
+
+            <p className="text-[11px] sm:text-xs text-rose-200/90 font-medium max-w-md mx-auto">
+              We show property for large investment, high ticket properties for 1% people
+            </p>
 
             {/* Side-by-Side Location & Property Type Selectors ONLY */}
             <div>
