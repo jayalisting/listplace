@@ -305,9 +305,6 @@ export default function AdminDatabaseMonitor() {
                 } else if (table.table_name === "image_seo_records") {
                   badgeText = "Delta Storage + Hash"
                   badgeColor = "bg-indigo-500/10 text-indigo-600 border-indigo-500/20"
-                } else if (table.table_name === "crm_store") {
-                  badgeText = "LZ4 Unified Store"
-                  badgeColor = "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
                 }
 
                 return (

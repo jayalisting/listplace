@@ -40,7 +40,6 @@ import {
   EyeOff,
   Star,
   ArrowUpDown,
-  Briefcase,
 } from "lucide-react"
 
 import PropertyHeader from "@/components/property-header"
@@ -1218,13 +1217,6 @@ export default function SimpleAddListingPage() {
                 className="px-5 py-2.5 rounded-full bg-[#800020] text-white text-xs font-bold hover:bg-red-950 transition shadow"
               >
                 View Property Page
-              </Link>
-              <Link
-                href={`/admin/crm?prop=${publishedId}`}
-                className="px-5 py-2.5 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-xs font-bold hover:from-indigo-500 hover:to-purple-500 transition shadow flex items-center gap-1.5"
-              >
-                <Briefcase className="w-3.5 h-3.5 text-indigo-200" />
-                <span>Open in CRM (Manage Brokers & Priority)</span>
               </Link>
               <button
                 type="button"

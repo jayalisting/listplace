@@ -60,15 +60,13 @@ import ImageUploadManager from "@/components/image-upload-manager"
 import PropertyShareModal from "@/components/property-share-modal"
 import AdminImageSeoManager from "@/components/admin-image-seo-manager"
 import AdminDatabaseMonitor from "@/components/admin-database-monitor"
-import CrmWorkspace from "@/components/crm-workspace"
 import AdminErrorBoundary from "@/components/admin-error-boundary"
 
 export default function AdminPage() {
   const [properties, setProperties] = useState<LuxuryProperty[]>([])
   const [loading, setLoading] = useState(true)
   const [dbConnected, setDbConnected] = useState(false)
-  const [mainAdminTab, setMainAdminTab] = useState<"estates" | "vip_appointments" | "image_seo" | "database_monitor" | "crm">("estates")
-  const [crmTargetPropId, setCrmTargetPropId] = useState<string | null>(null)
+  const [mainAdminTab, setMainAdminTab] = useState<"estates" | "vip_appointments" | "image_seo" | "database_monitor">("estates")
   const [vipBookings, setVipBookings] = useState<any[]>([])
   const [loadingBookings, setLoadingBookings] = useState(false)
   const [updatingBookingId, setUpdatingBookingId] = useState<number | null>(null)
@@ -1153,18 +1151,6 @@ export default function AdminPage() {
             <Database className="w-4 h-4 text-emerald-500" />
             <span>⚡ Database & Cost Monitor</span>
           </button>
-
-          <button
-            onClick={() => setMainAdminTab("crm")}
-            className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold flex items-center space-x-2 whitespace-nowrap flex-shrink-0 transition-all ${
-              mainAdminTab === "crm"
-                ? "bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 text-white shadow-md shadow-indigo-600/20 font-black"
-                : "bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-indigo-50"
-            }`}
-          >
-            <Briefcase className="w-4 h-4 text-indigo-400" />
-            <span>💼 Real Estate CRM</span>
-          </button>
         </div>
 
         <AdminErrorBoundary key={mainAdminTab} fallbackTitle="Admin Section Encountered an Error">
@@ -1393,21 +1379,6 @@ export default function AdminPage() {
                     >
                       <Share2 className="w-3.5 h-3.5 mr-1 text-amber-600" />
                       <span>Share</span>
-                    </Button>
-
-                    {/* Open in CRM Deal Pipeline */}
-                    <Button
-                      onClick={() => {
-                        setCrmTargetPropId(item.id)
-                        setMainAdminTab("crm")
-                      }}
-                      size="sm"
-                      variant="outline"
-                      className="border-indigo-500/40 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 text-xs font-bold h-9 px-2.5 rounded-xl shadow-xs"
-                      title="Manage Brokers, Deal Priority & Confidential Location in CRM"
-                    >
-                      <Briefcase className="w-3.5 h-3.5 mr-1 text-indigo-600" />
-                      <span>CRM Deal</span>
                     </Button>
 
                     <Link href={`/property/${item.id}${item.visibility === "private" ? "?access=private_vip" : ""}`} target="_blank">
@@ -1853,10 +1824,6 @@ export default function AdminPage() {
     ) : mainAdminTab === "database_monitor" ? (
       <AdminErrorBoundary fallbackTitle="Database Monitor encountered an error">
         <AdminDatabaseMonitor />
-      </AdminErrorBoundary>
-    ) : mainAdminTab === "crm" ? (
-      <AdminErrorBoundary fallbackTitle="Real Estate CRM encountered an error" onReset={() => setMainAdminTab("estates")}>
-        <CrmWorkspace initialPropId={crmTargetPropId || undefined} />
       </AdminErrorBoundary>
     ) : null}
         </AdminErrorBoundary>

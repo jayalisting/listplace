@@ -76,9 +76,8 @@ export async function initializeDatabase(): Promise<boolean> {
   try {
     const client = await pool.connect()
     try {
-      // Fast path: probe whether table, updated columns and crm_store are available
+      // Fast path: probe whether table and updated columns are available
       await client.query("SELECT lat FROM properties LIMIT 1")
-      await client.query("SELECT 1 FROM crm_store LIMIT 1")
       isInitialized = true
       return true
     } catch {
@@ -244,14 +243,6 @@ async function runFullSchemaMigration(client: any): Promise<void> {
       old_url VARCHAR(500) PRIMARY KEY,
       new_url VARCHAR(500) NOT NULL,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-    );
-
-    CREATE TABLE IF NOT EXISTS crm_store (
-      id VARCHAR(50) PRIMARY KEY DEFAULT 'main',
-      data JSONB NOT NULL DEFAULT '{"people":[],"props":[],"tasks":[],"files":[],"trash":[],"settings":{}}'::jsonb,
-      version INT NOT NULL DEFAULT 1,
-      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
     );
   `)
 
@@ -749,13 +740,6 @@ export async function createDbProperty(data: Partial<LuxuryProperty>): Promise<L
       ]
     )
 
-    // Automatically link to CRM pipeline, keeping personal/broker/priority data in CRM
-    try {
-      await syncEstateToCrm(newProperty)
-    } catch (e) {
-      console.warn("Notice: automatic CRM deal link on create:", e)
-    }
-
     return newProperty
   } finally {
     client.release()
@@ -944,13 +928,7 @@ export async function updateDbProperty(id: string, updates: Partial<LuxuryProper
 
     if (res.rows.length > 0) {
       const { idToName } = await getAmenitiesLookup(client)
-      const updated = mapRowToProperty(res.rows[0], idToName)
-      try {
-        await syncEstateToCrm(updated)
-      } catch (e) {
-        console.warn("Notice: automatic CRM deal link on update:", e)
-      }
-      return updated
+      return mapRowToProperty(res.rows[0], idToName)
     }
     return null
   } finally {
@@ -972,13 +950,7 @@ export async function updateDbPropertyAmenities(id: string, amenities: string[])
     )
     if (res.rows.length > 0) {
       const { idToName } = await getAmenitiesLookup(client)
-      const updated = mapRowToProperty(res.rows[0], idToName)
-      try {
-        await syncEstateToCrm(updated)
-      } catch (e) {
-        console.warn("Notice: automatic CRM deal link on update:", e)
-      }
-      return updated
+      return mapRowToProperty(res.rows[0], idToName)
     }
     return null
   } finally {
@@ -1726,265 +1698,6 @@ export async function get301Redirect(oldUrl: string): Promise<string | null> {
     return null
   } finally {
     client.release()
-  }
-}
-
-/**
- * ── Unified Real Estate CRM Data Access Layer ──
- * High-performance, low-RAM, serverless-optimized CRM store in PostgreSQL.
- */
-export interface CrmState {
-  people: any[]
-  props: any[]
-  tasks: any[]
-  files: any[]
-  trash: any[]
-  settings: any
-  version: number
-}
-
-const DEFAULT_CRM_STATE: CrmState = {
-  people: [],
-  props: [],
-  tasks: [],
-  files: [],
-  trash: [],
-  settings: {
-    followupRules: {
-      "New lead": 7,
-      "Collecting info": 7,
-      "Documents verified": 7,
-      Listed: 14,
-      "Site visits": 7,
-      Negotiation: 3,
-      "Token paid": 5,
-      Agreement: 5,
-      "Registration pending": 10,
-      Sold: 0,
-      "On hold": 30,
-      Dropped: 30,
-    },
-    whatsappTemplates: [
-      {
-        id: "owner-docs",
-        name: "Ask owner for docs",
-        template: "Hi {{owner}}, please send the required documents for {{property}}.",
-      },
-      {
-        id: "broker-update",
-        name: "Ask broker update",
-        template: "Hi {{broker}}, any update on {{property}}?",
-      },
-      {
-        id: "share-buyer",
-        name: "Share with buyer",
-        template: "Hi {{buyer}}, please see {{property}} at {{link}}. Price: {{price}}.",
-      },
-    ],
-    savedViews: [],
-  },
-  version: 1,
-}
-
-export async function getCrmStore(): Promise<CrmState> {
-  await initializeDatabase()
-  const client = await pool.connect()
-  try {
-    const res = await client.query("SELECT data, version FROM crm_store WHERE id = 'main' LIMIT 1;")
-    if (res.rows.length > 0) {
-      const row = res.rows[0]
-      const data = typeof row.data === "string" ? JSON.parse(row.data) : row.data
-      return {
-        ...DEFAULT_CRM_STATE,
-        ...data,
-        version: row.version ?? data.version ?? 1,
-      }
-    }
-
-    // Initialize with default state if not present
-    await client.query(
-      `
-      INSERT INTO crm_store (id, data, version, updated_at)
-      VALUES ('main', $1, 1, NOW())
-      ON CONFLICT (id) DO NOTHING;
-      `,
-      [JSON.stringify(DEFAULT_CRM_STATE)]
-    )
-    return DEFAULT_CRM_STATE
-  } catch (err) {
-    console.error("Error fetching CRM store:", err)
-    return DEFAULT_CRM_STATE
-  } finally {
-    client.release()
-  }
-}
-
-export async function saveCrmStore(
-  incomingData: Partial<CrmState>,
-  expectedVersion?: number
-): Promise<{ success: boolean; version?: number; conflict?: boolean; currentVersion?: number; error?: string }> {
-  await initializeDatabase()
-  const client = await pool.connect()
-  try {
-    const currentRes = await client.query("SELECT data, version FROM crm_store WHERE id = 'main' LIMIT 1;")
-    let currentVersion = 1
-    let currentData = DEFAULT_CRM_STATE
-
-    if (currentRes.rows.length > 0) {
-      currentVersion = currentRes.rows[0].version
-      currentData =
-        typeof currentRes.rows[0].data === "string"
-          ? JSON.parse(currentRes.rows[0].data)
-          : currentRes.rows[0].data
-    }
-
-    if (expectedVersion !== undefined && expectedVersion !== currentVersion) {
-      return { success: false, conflict: true, currentVersion }
-    }
-
-    // Merge incoming data collections shallowly
-    const mergedData = {
-      ...currentData,
-      people: incomingData.people ?? currentData.people ?? [],
-      props: incomingData.props ?? currentData.props ?? [],
-      tasks: incomingData.tasks ?? currentData.tasks ?? [],
-      files: incomingData.files ?? currentData.files ?? [],
-      trash: incomingData.trash ?? currentData.trash ?? [],
-      settings: incomingData.settings ? { ...currentData.settings, ...incomingData.settings } : currentData.settings,
-    }
-
-    const nextVersion = currentVersion + 1
-
-    await client.query(
-      `
-      INSERT INTO crm_store (id, data, version, updated_at)
-      VALUES ('main', $1, $2, NOW())
-      ON CONFLICT (id) DO UPDATE
-      SET data = EXCLUDED.data,
-          version = EXCLUDED.version,
-          updated_at = NOW();
-      `,
-      [JSON.stringify(mergedData), nextVersion]
-    )
-
-    return { success: true, version: nextVersion }
-  } catch (err: any) {
-    console.error("Error saving CRM store:", err)
-    return { success: false, error: err.message || "Failed to update CRM store" }
-  } finally {
-    client.release()
-  }
-}
-
-/**
- * Automatically link and synchronize a property from the main property database
- * into the CRM deal pipeline, keeping personal/confidential data strictly separate.
- */
-export async function syncEstateToCrm(
-  property: LuxuryProperty,
-  personalOverrides?: {
-    priority?: string
-    brokers?: any[]
-    confidentialLocation?: string
-    bottomPrice?: number | string
-    brokerNotes?: string
-    privateNotes?: string
-  }
-): Promise<{ crmId: string; created: boolean }> {
-  try {
-    const crmState = await getCrmStore()
-    const props = Array.isArray(crmState.props) ? [...crmState.props] : []
-
-    // Match by linkedPropertyId OR identical name
-    const existingIndex = props.findIndex(
-      (p) =>
-        String(p.linkedPropertyId || "") === String(property.id) ||
-        (p.name && p.name.trim().toLowerCase() === property.title.trim().toLowerCase())
-    )
-
-    let crmType = "Villa"
-    if (property.category === "residential") crmType = property.propertyType || "Villa"
-    else if (property.category === "commercial") crmType = "Commercial"
-    else if (property.category === "industrial") crmType = "Plot / site"
-    else if (property.category === "agriculture") crmType = "Agricultural land"
-
-    if (existingIndex >= 0) {
-      // Keep existing personal data (brokers, priority, confidentialLocation, bottomPrice, etc.)
-      const existing = props[existingIndex]
-      const updatedCrmProp = {
-        ...existing,
-        linkedPropertyId: property.id,
-        name: property.title,
-        type: existing.type || crmType,
-        village: existing.village || property.location || property.city || "",
-        price: property.priceNumeric || existing.price || 0,
-        quote: property.priceNumeric || existing.quote || 0,
-        priority: personalOverrides?.priority || existing.priority || "Normal",
-        confidentialLocation:
-          personalOverrides?.confidentialLocation !== undefined
-            ? personalOverrides.confidentialLocation
-            : existing.confidentialLocation || "",
-        bottomPrice:
-          personalOverrides?.bottomPrice !== undefined
-            ? personalOverrides.bottomPrice
-            : existing.bottomPrice || "",
-        brokerNotes:
-          personalOverrides?.brokerNotes !== undefined
-            ? personalOverrides.brokerNotes
-            : existing.brokerNotes || "",
-        privateNotes:
-          personalOverrides?.privateNotes !== undefined
-            ? personalOverrides.privateNotes
-            : existing.privateNotes || "",
-        updated: Date.now(),
-      }
-      props[existingIndex] = updatedCrmProp
-      await saveCrmStore({ props }, crmState.version)
-      return { crmId: existing.id, created: false }
-    } else {
-      // Create new linked CRM deal
-      const nextIdNum =
-        1 + Math.max(0, ...props.map((p) => parseInt(String(p?.id || "").replace(/\D/g, "") || "0", 10)))
-      const crmId = `PROP-${String(nextIdNum).padStart(4, "0")}`
-
-      const newCrmProp = {
-        id: crmId,
-        linkedPropertyId: property.id,
-        name: property.title,
-        type: crmType,
-        status: property.visibility === "private" ? "New lead" : "Listed",
-        priority: personalOverrides?.priority || "Normal",
-        village: property.location || property.city || "",
-        confidentialLocation: personalOverrides?.confidentialLocation || "",
-        area: property.area ? String(property.area).replace(/\D/g, "") : "",
-        unit: property.area?.toLowerCase().includes("acre") ? "acre" : "sq ft",
-        price: property.priceNumeric || 0,
-        quote: property.priceNumeric || 0,
-        bottomPrice: personalOverrides?.bottomPrice || "",
-        description: property.tagline || "",
-        owners: [],
-        brokers: personalOverrides?.brokers || [],
-        brokerNotes: personalOverrides?.brokerNotes || "",
-        privateNotes: personalOverrides?.privateNotes || "",
-        log: [
-          {
-            t: Date.now(),
-            x: `Linked from Property Database (Asset #${property.id})`,
-          },
-        ],
-        updated: Date.now(),
-        starred: Boolean(property.isExclusive || property.isTrophy),
-        tags: ["JayaListing", property.category],
-        timeline: [],
-      }
-
-      props.push(newCrmProp)
-      await saveCrmStore({ props }, crmState.version)
-      return { crmId, created: true }
-    }
-  } catch (err) {
-    console.warn("Notice: syncEstateToCrm background error:", err)
-    return { crmId: "", created: false }
   }
 }
 
