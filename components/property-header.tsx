@@ -8,6 +8,7 @@ import Link from "next/link"
 import Image from "next/image"
 import SlidingSidebar from "./sliding-sidebar"
 import { useRouter } from "next/navigation"
+import WhatsAppIcon from "./whatsapp-icon"
 
 interface PropertyHeaderProps {
   onMenuClick?: () => void
@@ -134,9 +135,9 @@ export default function PropertyHeader({ onMenuClick }: PropertyHeaderProps) {
               href="https://wa.me/918296530609?text=Hello%20JayaListing%20Luxury%20Team%2C%20I%20am%20interested%20in%20your%20portfolio"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-[11px] sm:text-xs font-bold px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-[#25D366] hover:bg-[#20ba59] text-white shadow-sm shrink-0 whitespace-nowrap transition-all"
+              className="inline-flex items-center gap-1 sm:gap-1.5 text-[11px] sm:text-xs font-bold px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-[#25D366] hover:bg-[#20ba59] text-white shadow-sm shrink-0 whitespace-nowrap transition-all"
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0" />
+              <WhatsAppIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white shrink-0" />
               <span>WhatsApp</span>
             </a>
           </div>

@@ -43,6 +43,7 @@ import {
   AlertCircle,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
+import WhatsAppIcon from "./whatsapp-icon"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -1229,7 +1230,7 @@ export default function PropertyDetailsClient({
                     rel="noopener noreferrer"
                     className="w-full flex items-center justify-center h-10 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-white font-bold text-xs transition-colors shadow-sm"
                   >
-                    <MessageCircle className="w-4 h-4 mr-2" />
+                    <WhatsAppIcon className="w-4 h-4 mr-2 text-white shrink-0" />
                     WhatsApp
                   </a>
 
@@ -1418,7 +1419,7 @@ export default function PropertyDetailsClient({
             className="px-3 py-2 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-white shadow-sm flex items-center justify-center gap-1.5 font-bold text-xs"
             title="WhatsApp"
           >
-            <MessageCircle className="w-4 h-4" />
+            <WhatsAppIcon className="w-4 h-4 text-white shrink-0" />
             <span>WhatsApp</span>
           </a>
           <Button
