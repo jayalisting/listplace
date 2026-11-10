@@ -44,9 +44,14 @@ export default function CommercialPage() {
       cache: "no-store",
       headers: { "Cache-Control": "no-cache" },
     })
-      .then((res) => res.json())
+      .then(async (res) => {
+        if (!res.ok) return null
+        const ct = res.headers.get("content-type") || ""
+        if (!ct.includes("application/json")) return null
+        return res.json()
+      })
       .then((data) => {
-        if (data.success && Array.isArray(data.data)) {
+        if (data && data.success && Array.isArray(data.data)) {
           setCommercialProperties(data.data)
         }
       })

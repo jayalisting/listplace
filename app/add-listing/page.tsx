@@ -304,9 +304,14 @@ export default function SimpleAddListingPage() {
   useEffect(() => {
     setMounted(true)
     fetch("/api/admin/check")
-      .then((res) => res.json())
+      .then(async (res) => {
+        if (!res.ok) return { authenticated: false }
+        const contentType = res.headers.get("content-type") || ""
+        if (!contentType.includes("application/json")) return { authenticated: false }
+        return res.json()
+      })
       .then((data) => {
-        if (data.authenticated) {
+        if (data && data.authenticated) {
           setIsAdminAuthenticated(true)
           localStorage.setItem("jaya_admin_authenticated", "true")
         } else {
@@ -331,6 +336,11 @@ export default function SimpleAddListingPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password: adminPinInput }),
       })
+      const contentType = res.headers.get("content-type") || ""
+      if (!contentType.includes("application/json")) {
+        setPinError(true)
+        return
+      }
       const data = await res.json()
       if (data.success) {
         setIsAdminAuthenticated(true)
@@ -387,13 +397,18 @@ export default function SimpleAddListingPage() {
   useEffect(() => {
     if (isAdminAuthenticated) {
       fetch(`/api/properties?includePrivate=true&t=${Date.now()}`)
-        .then((res) => res.json())
+        .then(async (res) => {
+          if (!res.ok) return null
+          const contentType = res.headers.get("content-type") || ""
+          if (!contentType.includes("application/json")) return null
+          return res.json()
+        })
         .then((data) => {
-          if (data.success && Array.isArray(data.data)) {
+          if (data && data.success && Array.isArray(data.data)) {
             setAdminProperties(data.data)
           }
         })
-        .catch((err) => console.log("Failed to load admin properties:", err))
+        .catch((err) => console.warn("Failed to load admin properties:", err))
     }
   }, [isAdminAuthenticated, publishedId])
 
@@ -406,8 +421,13 @@ export default function SimpleAddListingPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ visibility: nextVis }),
       })
+      const contentType = res.headers.get("content-type") || ""
+      if (!contentType.includes("application/json")) {
+        console.warn("Invalid response when toggling visibility")
+        return
+      }
       const data = await res.json()
-      if (data.success) {
+      if (data && data.success) {
         setAdminProperties((prev) =>
           prev.map((p) => (p.id === prop.id ? { ...p, visibility: nextVis } : p))
         )
@@ -896,12 +916,20 @@ export default function SimpleAddListingPage() {
         body: JSON.stringify(payload),
       })
 
-      const data = await res.json()
+      const contentType = res.headers.get("content-type") || ""
+      let data: any = {}
+      if (contentType.includes("application/json")) {
+        data = await res.json()
+      } else {
+        const text = await res.text()
+        throw new Error(`Server returned HTTP ${res.status}: ${text.slice(0, 120)}`)
+      }
+
       if (!res.ok || !data.success) {
         throw new Error(data.error || "Failed to create listing")
       }
 
-      setPublishedId(data.data.id)
+      setPublishedId(data.data?.id || null)
     } catch (err: any) {
       setErrorMsg(err.message || "An unexpected error occurred.")
     } finally {

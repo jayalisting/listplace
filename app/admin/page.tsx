@@ -521,6 +521,11 @@ export default function AdminPage() {
         cache: "no-store",
         headers: { "Cache-Control": "no-cache" },
       })
+      const contentType = res.headers.get("content-type") || ""
+      if (!contentType.includes("application/json")) {
+        setDbConnected(false)
+        return
+      }
       const data = await res.json()
       if (data.success && Array.isArray(data.data)) {
         setProperties(data.data)
@@ -543,6 +548,8 @@ export default function AdminPage() {
         cache: "no-store",
         headers: { "Cache-Control": "no-cache", "x-admin-key": "jayaadmin" },
       })
+      const contentType = res.headers.get("content-type") || ""
+      if (!contentType.includes("application/json")) return
       const data = await res.json()
       if (data.success && Array.isArray(data.data)) {
         setVipBookings(data.data)
@@ -619,9 +626,14 @@ export default function AdminPage() {
   useEffect(() => {
     setMounted(true)
     fetch("/api/admin/check")
-      .then((res) => res.json())
+      .then(async (res) => {
+        if (!res.ok) return { authenticated: false }
+        const contentType = res.headers.get("content-type") || ""
+        if (!contentType.includes("application/json")) return { authenticated: false }
+        return res.json()
+      })
       .then((data) => {
-        if (data.authenticated) {
+        if (data && data.authenticated) {
           setIsAdminAuthenticated(true)
           localStorage.setItem("jaya_admin_authenticated", "true")
         } else {
