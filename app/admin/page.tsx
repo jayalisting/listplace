@@ -68,6 +68,7 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true)
   const [dbConnected, setDbConnected] = useState(false)
   const [mainAdminTab, setMainAdminTab] = useState<"estates" | "vip_appointments" | "image_seo" | "database_monitor" | "crm">("estates")
+  const [crmTargetPropId, setCrmTargetPropId] = useState<string | null>(null)
   const [vipBookings, setVipBookings] = useState<any[]>([])
   const [loadingBookings, setLoadingBookings] = useState(false)
   const [updatingBookingId, setUpdatingBookingId] = useState<number | null>(null)
@@ -1382,6 +1383,21 @@ export default function AdminPage() {
                       <span>Share</span>
                     </Button>
 
+                    {/* Open in CRM Deal Pipeline */}
+                    <Button
+                      onClick={() => {
+                        setCrmTargetPropId(item.id)
+                        setMainAdminTab("crm")
+                      }}
+                      size="sm"
+                      variant="outline"
+                      className="border-indigo-500/40 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 text-xs font-bold h-9 px-2.5 rounded-xl shadow-xs"
+                      title="Manage Brokers, Deal Priority & Confidential Location in CRM"
+                    >
+                      <Briefcase className="w-3.5 h-3.5 mr-1 text-indigo-600" />
+                      <span>CRM Deal</span>
+                    </Button>
+
                     <Link href={`/property/${item.id}${item.visibility === "private" ? "?access=private_vip" : ""}`} target="_blank">
                       <Button
                         size="sm"
@@ -1828,7 +1844,7 @@ export default function AdminPage() {
       </AdminErrorBoundary>
     ) : mainAdminTab === "crm" ? (
       <AdminErrorBoundary fallbackTitle="Real Estate CRM encountered an error" onReset={() => setMainAdminTab("estates")}>
-        <CrmWorkspace />
+        <CrmWorkspace initialPropId={crmTargetPropId || undefined} />
       </AdminErrorBoundary>
     ) : null}
         </AdminErrorBoundary>

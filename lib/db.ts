@@ -748,6 +748,14 @@ export async function createDbProperty(data: Partial<LuxuryProperty>): Promise<L
         amenityIds,
       ]
     )
+
+    // Automatically link to CRM pipeline, keeping personal/broker/priority data in CRM
+    try {
+      await syncEstateToCrm(newProperty)
+    } catch (e) {
+      console.warn("Notice: automatic CRM deal link on create:", e)
+    }
+
     return newProperty
   } finally {
     client.release()
@@ -936,7 +944,13 @@ export async function updateDbProperty(id: string, updates: Partial<LuxuryProper
 
     if (res.rows.length > 0) {
       const { idToName } = await getAmenitiesLookup(client)
-      return mapRowToProperty(res.rows[0], idToName)
+      const updated = mapRowToProperty(res.rows[0], idToName)
+      try {
+        await syncEstateToCrm(updated)
+      } catch (e) {
+        console.warn("Notice: automatic CRM deal link on update:", e)
+      }
+      return updated
     }
     return null
   } finally {
@@ -958,7 +972,13 @@ export async function updateDbPropertyAmenities(id: string, amenities: string[])
     )
     if (res.rows.length > 0) {
       const { idToName } = await getAmenitiesLookup(client)
-      return mapRowToProperty(res.rows[0], idToName)
+      const updated = mapRowToProperty(res.rows[0], idToName)
+      try {
+        await syncEstateToCrm(updated)
+      } catch (e) {
+        console.warn("Notice: automatic CRM deal link on update:", e)
+      }
+      return updated
     }
     return null
   } finally {
@@ -1853,6 +1873,118 @@ export async function saveCrmStore(
     return { success: false, error: err.message || "Failed to update CRM store" }
   } finally {
     client.release()
+  }
+}
+
+/**
+ * Automatically link and synchronize a property from the main property database
+ * into the CRM deal pipeline, keeping personal/confidential data strictly separate.
+ */
+export async function syncEstateToCrm(
+  property: LuxuryProperty,
+  personalOverrides?: {
+    priority?: string
+    brokers?: any[]
+    confidentialLocation?: string
+    bottomPrice?: number | string
+    brokerNotes?: string
+    privateNotes?: string
+  }
+): Promise<{ crmId: string; created: boolean }> {
+  try {
+    const crmState = await getCrmStore()
+    const props = Array.isArray(crmState.props) ? [...crmState.props] : []
+
+    // Match by linkedPropertyId OR identical name
+    const existingIndex = props.findIndex(
+      (p) =>
+        String(p.linkedPropertyId || "") === String(property.id) ||
+        (p.name && p.name.trim().toLowerCase() === property.title.trim().toLowerCase())
+    )
+
+    let crmType = "Villa"
+    if (property.category === "residential") crmType = property.propertyType || "Villa"
+    else if (property.category === "commercial") crmType = "Commercial"
+    else if (property.category === "industrial") crmType = "Plot / site"
+    else if (property.category === "agriculture") crmType = "Agricultural land"
+
+    if (existingIndex >= 0) {
+      // Keep existing personal data (brokers, priority, confidentialLocation, bottomPrice, etc.)
+      const existing = props[existingIndex]
+      const updatedCrmProp = {
+        ...existing,
+        linkedPropertyId: property.id,
+        name: property.title,
+        type: existing.type || crmType,
+        village: existing.village || property.location || property.city || "",
+        price: property.priceNumeric || existing.price || 0,
+        quote: property.priceNumeric || existing.quote || 0,
+        priority: personalOverrides?.priority || existing.priority || "Normal",
+        confidentialLocation:
+          personalOverrides?.confidentialLocation !== undefined
+            ? personalOverrides.confidentialLocation
+            : existing.confidentialLocation || "",
+        bottomPrice:
+          personalOverrides?.bottomPrice !== undefined
+            ? personalOverrides.bottomPrice
+            : existing.bottomPrice || "",
+        brokerNotes:
+          personalOverrides?.brokerNotes !== undefined
+            ? personalOverrides.brokerNotes
+            : existing.brokerNotes || "",
+        privateNotes:
+          personalOverrides?.privateNotes !== undefined
+            ? personalOverrides.privateNotes
+            : existing.privateNotes || "",
+        updated: Date.now(),
+      }
+      props[existingIndex] = updatedCrmProp
+      await saveCrmStore({ props }, crmState.version)
+      return { crmId: existing.id, created: false }
+    } else {
+      // Create new linked CRM deal
+      const nextIdNum =
+        1 + Math.max(0, ...props.map((p) => parseInt(String(p?.id || "").replace(/\D/g, "") || "0", 10)))
+      const crmId = `PROP-${String(nextIdNum).padStart(4, "0")}`
+
+      const newCrmProp = {
+        id: crmId,
+        linkedPropertyId: property.id,
+        name: property.title,
+        type: crmType,
+        status: property.visibility === "private" ? "New lead" : "Listed",
+        priority: personalOverrides?.priority || "Normal",
+        village: property.location || property.city || "",
+        confidentialLocation: personalOverrides?.confidentialLocation || "",
+        area: property.area ? String(property.area).replace(/\D/g, "") : "",
+        unit: property.area?.toLowerCase().includes("acre") ? "acre" : "sq ft",
+        price: property.priceNumeric || 0,
+        quote: property.priceNumeric || 0,
+        bottomPrice: personalOverrides?.bottomPrice || "",
+        description: property.tagline || "",
+        owners: [],
+        brokers: personalOverrides?.brokers || [],
+        brokerNotes: personalOverrides?.brokerNotes || "",
+        privateNotes: personalOverrides?.privateNotes || "",
+        log: [
+          {
+            t: Date.now(),
+            x: `Linked from Property Database (Asset #${property.id})`,
+          },
+        ],
+        updated: Date.now(),
+        starred: Boolean(property.isExclusive || property.isTrophy),
+        tags: ["JayaListing", property.category],
+        timeline: [],
+      }
+
+      props.push(newCrmProp)
+      await saveCrmStore({ props }, crmState.version)
+      return { crmId, created: true }
+    }
+  } catch (err) {
+    console.warn("Notice: syncEstateToCrm background error:", err)
+    return { crmId: "", created: false }
   }
 }
 

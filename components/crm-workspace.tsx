@@ -36,6 +36,10 @@ import {
   Copy,
   ChevronRight,
   TrendingUp,
+  Lock,
+  Link2,
+  Briefcase,
+  Shield,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -199,7 +203,7 @@ const DEFAULT_CRM_DATA: CrmState = {
 }
 
 // ── Main Component ─────────────────────────────────────────────────────────
-export default function CrmWorkspace() {
+export default function CrmWorkspace({ initialPropId }: { initialPropId?: string } = {}) {
   const [db, setDb] = useState<CrmState>(DEFAULT_CRM_DATA)
   const [isLoading, setIsLoading] = useState(true)
   const [nav, setNav] = useState<{ screen: "today" | "props" | "people" | "backup" | "prop" | "person"; id?: string }>({
@@ -214,6 +218,10 @@ export default function CrmWorkspace() {
   const [isSyncingPortfolio, setIsSyncingPortfolio] = useState(false)
   const [syncNotice, setSyncNotice] = useState<string | null>(null)
 
+  // Broker Inline Add State
+  const [brokerForm, setBrokerForm] = useState({ name: "", phone: "", commission: "", note: "" })
+  const [showAddBroker, setShowAddBroker] = useState(false)
+
   // Modals & Panels
   const [showQuickAdd, setShowQuickAdd] = useState(false)
   const [activeModal, setActiveModal] = useState<any>(null)
@@ -221,6 +229,18 @@ export default function CrmWorkspace() {
   const [activeLogBar, setActiveLogBar] = useState<{ personId?: string; propId?: string } | null>(null)
 
   const isDirty = useRef(false)
+
+  // Listen to initialPropId or ?prop= query param to jump straight to property
+  useEffect(() => {
+    if (!db?.props?.length) return
+    const target = initialPropId || (typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("prop") : null)
+    if (target) {
+      const matched = db.props.find((p) => p.id === target || String(p.linkedPropertyId || "") === String(target))
+      if (matched) {
+        setNav({ screen: "prop", id: matched.id })
+      }
+    }
+  }, [initialPropId, db?.props?.length])
 
   // 1. Fetch CRM State from PostgreSQL
   async function fetchCrmState() {
@@ -1027,13 +1047,14 @@ export default function CrmWorkspace() {
                   <tr>
                     <th></th>
                     <th>Property Name</th>
+                    <th>Priority</th>
                     <th>Status</th>
                     <th>Type</th>
+                    <th>Brokers</th>
                     <th>Location</th>
                     <th>Area</th>
                     <th>Ask Price</th>
                     <th>My Quote</th>
-                    <th>Survey No.</th>
                     <th>Next Action</th>
                   </tr>
                 </thead>
@@ -1049,13 +1070,39 @@ export default function CrmWorkspace() {
                         <td onClick={(e) => { e.stopPropagation(); updateState((d) => { const x = d.props.find((pr) => pr.id === p.id); if (x) x.starred = !x.starred; return d }) }}>
                           {p.starred ? "⭐" : "☆"}
                         </td>
-                        <td className="font-bold">{p.name}</td>
+                        <td className="font-bold">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span>{p.name}</span>
+                            {p.linkedPropertyId && (
+                              <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                🔗 #{p.linkedPropertyId}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td>
+                          {p.priority ? (
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                              p.priority === "Urgent" ? "bg-rose-50 text-rose-700 border-rose-300 font-extrabold" :
+                              p.priority === "High" ? "bg-amber-50 text-amber-800 border-amber-300" :
+                              p.priority === "Low" ? "bg-slate-50 text-slate-600 border-slate-300" :
+                              "bg-blue-50 text-blue-700 border-blue-200"
+                            }`}>
+                              {p.priority === "Urgent" ? "🔴 Urgent" : p.priority === "High" ? "🟠 High" : p.priority === "Low" ? "⚪ Low" : "🔵 Normal"}
+                            </span>
+                          ) : <span className="text-slate-400 text-xs">—</span>}
+                        </td>
                         <td>
                           <Badge style={{ background: (STATUS_COLORS[p.status] || "#999") + "20", color: STATUS_COLORS[p.status] || "#999" }}>
                             {p.status}
                           </Badge>
                         </td>
                         <td>{p.type}</td>
+                        <td>
+                          {(p.brokers || []).length > 0 ? (
+                            <span className="font-bold text-indigo-600 text-xs">{(p.brokers || []).length} assigned</span>
+                          ) : <span className="text-slate-400 text-xs">—</span>}
+                        </td>
                         <td>{p.village || "—"}</td>
                         <td>{p.area ? `${p.area} ${p.unit}` : "—"}</td>
                         <td>{formatINR(p.price)}</td>
@@ -1083,7 +1130,7 @@ export default function CrmWorkspace() {
                       <div className="prop-card-header">
                         <div>
                           <div className="font-bold text-base text-gray-900 dark:text-white">{p.name}</div>
-                          <div className="flex items-center gap-2 mt-1">
+                          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                             <span
                               className="text-[10px] font-bold px-2 py-0.5 rounded-full"
                               style={{ background: (STATUS_COLORS[p.status] || "#999") + "20", color: STATUS_COLORS[p.status] || "#999" }}
@@ -1091,6 +1138,27 @@ export default function CrmWorkspace() {
                               {p.status}
                             </span>
                             <span className="type-badge">{p.type}</span>
+                            {p.priority && (
+                              <span
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                                  p.priority === "Urgent"
+                                    ? "bg-rose-50 text-rose-700 border-rose-300 font-extrabold"
+                                    : p.priority === "High"
+                                    ? "bg-amber-50 text-amber-800 border-amber-300"
+                                    : p.priority === "Low"
+                                    ? "bg-slate-50 text-slate-600 border-slate-300"
+                                    : "bg-blue-50 text-blue-700 border-blue-200"
+                                }`}
+                              >
+                                {p.priority === "Urgent" ? "🔴 Urgent" : p.priority === "High" ? "🟠 High" : p.priority === "Low" ? "⚪ Low" : "🔵 Normal"}
+                              </span>
+                            )}
+                            {p.linkedPropertyId && (
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-0.5">
+                                <Link2 className="w-2.5 h-2.5" />
+                                <span>#{p.linkedPropertyId}</span>
+                              </span>
+                            )}
                           </div>
                         </div>
                         <button
@@ -1232,16 +1300,409 @@ export default function CrmWorkspace() {
                 </div>
               </div>
 
-              {/* Property Details Grid */}
+              {/* Linked Public Listing Banner */}
+              {p.linkedPropertyId && (
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 dark:from-blue-950/40 dark:via-indigo-950/30 dark:to-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-2xl shadow-xs">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold flex-shrink-0 shadow-xs">
+                      <Link2 className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-gray-900 dark:text-white text-xs sm:text-sm">
+                          Linked to JayaListing Portfolio Asset #{p.linkedPropertyId}
+                        </span>
+                        <Badge className="bg-emerald-600 text-white text-[10px] font-bold">
+                          Live Synchronized
+                        </Badge>
+                      </div>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                        Public marketing details (title, public asking price, gallery, amenities) sync from the main listing. Personal data below is private to your CRM.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <a
+                      href={`/property/${p.linkedPropertyId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-all shadow-xs"
+                    >
+                      <span>View Live Website</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              {/* ── SEPARATE PERSONAL & CONFIDENTIAL CRM DATA ── */}
+              <div className="card border-2 border-indigo-200 dark:border-indigo-900 bg-gradient-to-b from-white to-slate-50/50 dark:from-gray-900 dark:to-gray-900/50 shadow-md">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-4 mb-4 border-b border-gray-100 dark:border-gray-800">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-600/10 border border-indigo-600/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                      <Lock className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-black text-base text-gray-900 dark:text-white">
+                          Personal & Confidential CRM Records
+                        </h3>
+                        <Badge className="bg-rose-50 text-rose-700 border-rose-200 text-[10px] font-bold">
+                          Private to CRM
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-slate-500">
+                        Brokers, deal priority, confidential location/boundaries & walkaway quotes are kept separate from the public listing.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Deal Priority Selector */}
+                  <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-xl border border-slate-200 dark:border-slate-700">
+                    <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300 ml-1">
+                      Priority:
+                    </span>
+                    <select
+                      value={p.priority || "Normal"}
+                      onChange={(e) => {
+                        const val = e.target.value
+                        updateState((d) => {
+                          const item = d.props.find((x) => x.id === id)
+                          if (item) {
+                            item.priority = val
+                            item.log.unshift({ t: Date.now(), x: `Priority changed to: ${val}` })
+                            item.updated = Date.now()
+                          }
+                          return d
+                        })
+                      }}
+                      className="text-xs font-bold py-1 px-2.5 rounded-lg border bg-white dark:bg-gray-900"
+                    >
+                      <option value="Urgent">🔴 Urgent Priority</option>
+                      <option value="High">🟠 High Priority</option>
+                      <option value="Normal">🔵 Normal Priority</option>
+                      <option value="Low">⚪ Low Priority</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* 4-Column Confidential Overview */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                  {/* Confidential Survey No. */}
+                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-gray-800/60 border border-slate-200 dark:border-slate-700">
+                    <span className="text-[10px] uppercase font-bold text-slate-500 block mb-1">
+                      🔑 Survey / Khasra No.
+                    </span>
+                    <input
+                      value={p.survey || ""}
+                      onChange={(e) => {
+                        const v = e.target.value
+                        updateState((d) => {
+                          const item = d.props.find((x) => x.id === id)
+                          if (item) { item.survey = v; item.updated = Date.now() }
+                          return d
+                        })
+                      }}
+                      placeholder="e.g. Sy No. 182/4B"
+                      className="w-full text-xs font-mono font-bold py-1 px-2 rounded-lg border bg-white dark:bg-gray-900"
+                    />
+                  </div>
+
+                  {/* RTC / Pahani Number */}
+                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-gray-800/60 border border-slate-200 dark:border-slate-700">
+                    <span className="text-[10px] uppercase font-bold text-slate-500 block mb-1">
+                      📋 RTC / Pahani Ref
+                    </span>
+                    <input
+                      value={p.rtc || ""}
+                      onChange={(e) => {
+                        const v = e.target.value
+                        updateState((d) => {
+                          const item = d.props.find((x) => x.id === id)
+                          if (item) { item.rtc = v; item.updated = Date.now() }
+                          return d
+                        })
+                      }}
+                      placeholder="e.g. RTC #2024-889"
+                      className="w-full text-xs font-mono font-bold py-1 px-2 rounded-lg border bg-white dark:bg-gray-900"
+                    />
+                  </div>
+
+                  {/* Owner's Confidential Bottom Price */}
+                  <div className="p-3 rounded-xl bg-rose-50/50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/40">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[10px] uppercase font-bold text-rose-800 dark:text-rose-400">
+                        🔒 Owner Bottom Price (₹)
+                      </span>
+                      <span className="text-[9px] text-gray-500 font-semibold">Confidential</span>
+                    </div>
+                    <input
+                      type="number"
+                      value={p.bottomPrice || ""}
+                      onChange={(e) => {
+                        const v = e.target.value ? Number(e.target.value) : ""
+                        updateState((d) => {
+                          const item = d.props.find((x) => x.id === id)
+                          if (item) { item.bottomPrice = v; item.updated = Date.now() }
+                          return d
+                        })
+                      }}
+                      placeholder="e.g. 35000000"
+                      className="w-full text-xs font-bold py-1 px-2 rounded-lg border bg-white dark:bg-gray-900 text-rose-700 dark:text-rose-300"
+                    />
+                    {Boolean(p.bottomPrice && p.quote && Number(p.quote) > Number(p.bottomPrice)) && (
+                      <div className="text-[10px] text-emerald-600 font-bold mt-1">
+                        Spread Margin: +{formatINR(Number(p.quote) - Number(p.bottomPrice))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Target Quoted Price */}
+                  <div className="p-3 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40">
+                    <span className="text-[10px] uppercase font-bold text-emerald-800 dark:text-emerald-400 block mb-1">
+                      💼 Quoted Deal Price (₹)
+                    </span>
+                    <input
+                      type="number"
+                      value={p.quote || ""}
+                      onChange={(e) => {
+                        const v = e.target.value ? Number(e.target.value) : ""
+                        updateState((d) => {
+                          const item = d.props.find((x) => x.id === id)
+                          if (item) { item.quote = v; item.updated = Date.now() }
+                          return d
+                        })
+                      }}
+                      placeholder="e.g. 40000000"
+                      className="w-full text-xs font-bold py-1 px-2 rounded-lg border bg-white dark:bg-gray-900 text-emerald-700 dark:text-emerald-300"
+                    />
+                  </div>
+                </div>
+
+                {/* Confidential Location & Boundaries */}
+                <div className="mb-6 p-4 rounded-2xl bg-amber-50/40 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-amber-700 dark:text-amber-400" />
+                      <span className="text-xs font-bold text-amber-950 dark:text-amber-200">
+                        Confidential Location & Boundary Directions (Never Published on Website)
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-amber-700 dark:text-amber-400 font-semibold">
+                      Private Directions
+                    </span>
+                  </div>
+                  <textarea
+                    rows={2}
+                    value={p.confidentialLocation || ""}
+                    onChange={(e) => {
+                      const v = e.target.value
+                      updateState((d) => {
+                        const item = d.props.find((x) => x.id === id)
+                        if (item) { item.confidentialLocation = v; item.updated = Date.now() }
+                        return d
+                      })
+                    }}
+                    placeholder="e.g. East boundary: Hegde plantation. North: Netravati tributary. Access via private 20-ft gate behind temple. Contact caretaker Ramesh on site."
+                    className="w-full text-xs p-2.5 rounded-xl border border-amber-300/60 dark:border-amber-800 bg-white dark:bg-gray-900 leading-relaxed"
+                  />
+                </div>
+
+                {/* Assigned Brokers & Commission Manager */}
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-gray-800/40 border border-slate-200 dark:border-slate-700 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Briefcase className="w-4 h-4 text-indigo-600" />
+                      <h4 className="text-xs font-bold text-gray-900 dark:text-white">
+                        Assigned Brokers & Commission Cut ({(p.brokers || []).length})
+                      </h4>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setShowAddBroker(!showAddBroker)}
+                      className="h-7 text-[11px] font-bold rounded-lg"
+                    >
+                      {showAddBroker ? "✕ Cancel" : "+ Assign Broker"}
+                    </Button>
+                  </div>
+
+                  {/* Inline Add Broker Form */}
+                  {showAddBroker && (
+                    <div className="p-3 bg-white dark:bg-gray-900 rounded-xl border border-indigo-200 dark:border-indigo-800 space-y-3 animate-in fade-in-50">
+                      <div className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400">
+                        Assign New Broker to this Deal
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <input
+                          placeholder="Broker Name (e.g. Suresh Poojary)"
+                          value={brokerForm.name}
+                          onChange={(e) => setBrokerForm({ ...brokerForm, name: e.target.value })}
+                          className="text-xs p-2 rounded-lg border bg-white dark:bg-gray-800"
+                        />
+                        <input
+                          placeholder="Phone (e.g. +91 98450 12345)"
+                          value={brokerForm.phone}
+                          onChange={(e) => setBrokerForm({ ...brokerForm, phone: e.target.value })}
+                          className="text-xs p-2 rounded-lg border bg-white dark:bg-gray-800"
+                        />
+                        <input
+                          placeholder="Commission (e.g. 2% or ₹1 Lakh)"
+                          value={brokerForm.commission}
+                          onChange={(e) => setBrokerForm({ ...brokerForm, commission: e.target.value })}
+                          className="text-xs p-2 rounded-lg border bg-white dark:bg-gray-800"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          placeholder="Broker Notes / Agreement terms (optional)"
+                          value={brokerForm.note}
+                          onChange={(e) => setBrokerForm({ ...brokerForm, note: e.target.value })}
+                          className="flex-1 text-xs p-2 rounded-lg border bg-white dark:bg-gray-800"
+                        />
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            if (!brokerForm.name.trim()) return
+                            updateState((d) => {
+                              const item = d.props.find((x) => x.id === id)
+                              if (item) {
+                                if (!Array.isArray(item.brokers)) item.brokers = []
+                                item.brokers.push({
+                                  name: brokerForm.name.trim(),
+                                  phone: brokerForm.phone.trim(),
+                                  commission: brokerForm.commission.trim(),
+                                  note: brokerForm.note.trim(),
+                                })
+                                item.log.unshift({
+                                  t: Date.now(),
+                                  x: `Assigned broker: ${brokerForm.name.trim()} (${brokerForm.commission || "Standard"})`,
+                                })
+                                item.updated = Date.now()
+                              }
+                              return d
+                            })
+                            setBrokerForm({ name: "", phone: "", commission: "", note: "" })
+                            setShowAddBroker(false)
+                          }}
+                          className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs h-8 px-4 rounded-lg"
+                        >
+                          Save Broker
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Brokers List */}
+                  <div className="space-y-2">
+                    {(p.brokers || []).map((b: any, bIdx: number) => {
+                      const bName = typeof b === "string" ? b : b?.name || "Broker"
+                      const bPhone = typeof b === "object" ? b?.phone : ""
+                      const bComm = typeof b === "object" ? b?.commission : ""
+                      const bNote = typeof b === "object" ? b?.note : ""
+
+                      return (
+                        <div
+                          key={bIdx}
+                          className="p-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs"
+                        >
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-gray-900 dark:text-white">{bName}</span>
+                              {bComm && (
+                                <Badge className="bg-amber-100 text-amber-900 border-amber-300 text-[10px] font-bold">
+                                  Commission: {bComm}
+                                </Badge>
+                              )}
+                            </div>
+                            {bPhone && <div className="text-gray-500 font-mono text-[11px]">{bPhone}</div>}
+                            {bNote && <div className="text-gray-600 dark:text-gray-400 text-[11px] italic">"{bNote}"</div>}
+                          </div>
+
+                          <div className="flex items-center gap-1.5 self-end sm:self-auto">
+                            {bPhone && (
+                              <>
+                                <a
+                                  href={waUrl(bPhone)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="p-1.5 rounded-lg bg-[#25D366] text-white hover:bg-[#20ba59] transition-colors"
+                                  title="Chat on WhatsApp"
+                                >
+                                  <MessageCircle className="w-3.5 h-3.5" />
+                                </a>
+                                <a
+                                  href={`tel:${String(bPhone).replace(/\s+/g, "")}`}
+                                  className="p-1.5 rounded-lg border bg-gray-50 hover:bg-gray-100 text-gray-700 dark:text-gray-300 transition-colors"
+                                  title="Call Broker"
+                                >
+                                  <Phone className="w-3.5 h-3.5" />
+                                </a>
+                              </>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                updateState((d) => {
+                                  const item = d.props.find((x) => x.id === id)
+                                  if (item && Array.isArray(item.brokers)) {
+                                    item.brokers.splice(bIdx, 1)
+                                    item.log.unshift({ t: Date.now(), x: `Removed broker: ${bName}` })
+                                    item.updated = Date.now()
+                                  }
+                                  return d
+                                })
+                              }}
+                              className="p-1.5 text-gray-400 hover:text-rose-600 transition-colors ml-1"
+                              title="Remove Broker"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    })}
+                    {(!p.brokers || p.brokers.length === 0) && (
+                      <div className="text-xs text-gray-400 py-2 italic text-center">
+                        No brokers assigned yet. Click "+ Assign Broker" to track broker phone, commission & agreements.
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Private Deal Notes & Negotiation History */}
+                <div className="pt-2">
+                  <label className="text-xs font-bold text-gray-700 dark:text-gray-300 block mb-1">
+                    📝 Private Internal Strategy & Negotiation Notes
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={p.privateNotes || ""}
+                    onChange={(e) => {
+                      const v = e.target.value
+                      updateState((d) => {
+                        const item = d.props.find((x) => x.id === id)
+                        if (item) { item.privateNotes = v; item.updated = Date.now() }
+                        return d
+                      })
+                    }}
+                    placeholder="e.g. Owner willing to discount 5% for all-cash settlement within 30 days. Client visited on Sunday, awaiting title search report."
+                    className="w-full text-xs p-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 leading-relaxed"
+                  />
+                </div>
+              </div>
+
+              {/* Public Specifications Summary */}
               <div className="card">
+                <div className="text-xs uppercase font-bold text-slate-500 mb-3 flex items-center gap-1.5">
+                  <Globe className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Public Listing Specifications (Synced with Main Database)</span>
+                </div>
                 <div className="detail-grid">
                   <div className="detail-item"><span className="prop-label">📐 Area</span><span className="font-bold">{p.area ? `${p.area} ${p.unit}` : "—"}</span></div>
-                  <div className="detail-item"><span className="prop-label">💰 Owner Expects</span><span className="font-bold">{formatINR(p.price)}</span></div>
-                  <div className="detail-item"><span className="prop-label">💼 My Quoted Price</span><span className="font-bold text-emerald-600">{formatINR(p.quote)}</span></div>
-                  <div className="detail-item"><span className="prop-label">🔑 Survey Number</span><span className="font-mono font-bold">{p.survey || "—"}</span></div>
-                  <div className="detail-item"><span className="prop-label">📄 Mutation Number</span><span className="font-mono font-bold">{p.mutation || "—"}</span></div>
-                  <div className="detail-item"><span className="prop-label">📋 RTC / Pahani</span><span className="font-mono font-bold">{p.rtc || "—"}</span></div>
-                  <div className="detail-item"><span className="prop-label">📁 Khata Number</span><span className="font-mono font-bold">{p.khata || "—"}</span></div>
+                  <div className="detail-item"><span className="prop-label">💰 Public Ask Price</span><span className="font-bold text-gray-900 dark:text-white">{formatINR(p.price)}</span></div>
+                  <div className="detail-item"><span className="prop-label">📍 Public Locality</span><span className="font-bold">{p.village || "—"}</span></div>
+                  <div className="detail-item"><span className="prop-label">🏷️ Property Type</span><span className="font-bold">{p.type}</span></div>
                 </div>
               </div>
 

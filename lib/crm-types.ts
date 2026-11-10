@@ -40,6 +40,17 @@ export type ContactRole =
   | "Surveyor"
   | "Other"
 
+export type DealPriority = "Urgent" | "High" | "Normal" | "Low"
+
+export interface BrokerEntry {
+  pid?: string
+  name?: string
+  phone?: string
+  commission?: number | string
+  quote?: number
+  note?: string
+}
+
 export type DocumentType =
   | "RTC / Pahani"
   | "Mutation"
@@ -58,24 +69,30 @@ export type DocumentType =
 
 export interface CrmProperty {
   id: string
+  linkedPropertyId?: string     // 🔗 Linked to public PostgreSQL properties.id
   name: string
   type: PropertyType | string
   status: PropertyStatus | string
-  village?: string
+  priority?: DealPriority | string  // ⭐ Deal Priority: Urgent / High / Normal / Low
+  village?: string              // Public / Marketing Locality
+  confidentialLocation?: string // 🔒 Private Survey / Boundary / Owner address
+  survey?: string               // Survey No.
+  mutation?: string             // Mutation No.
+  rtc?: string                  // RTC / Pahani No.
+  khata?: string                // Khata No.
   area?: number | string
   unit?: string
-  survey?: string
-  mutation?: string
-  rtc?: string
-  khata?: string
-  price?: number | string
-  quote?: number | string
+  price?: number | string       // Public Asking Price
+  quote?: number | string       // Target Negotiation Quote
+  bottomPrice?: number | string // 🔒 Confidential Owner Walkaway / Bottom Price
+  brokerNotes?: string          // 🔒 Confidential Broker Notes / Agreements
+  privateNotes?: string         // 🔒 Internal Notes (not visible on public website)
   maps?: string
   next?: string
   nextDate?: string
   description?: string
-  owners: string[]
-  brokers: Array<{ pid: string; quote?: number; note?: string } | string>
+  owners: string[]              // Linked Owner Person IDs
+  brokers: Array<BrokerEntry | string> // 🔒 Assigned Brokers with commission & notes
   log: Array<{ t: number; x: string }>
   starred?: boolean
   tags?: string[]
