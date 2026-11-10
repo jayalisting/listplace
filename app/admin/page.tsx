@@ -40,6 +40,7 @@ import {
   HelpCircle,
   Calendar,
   MessageCircle,
+  MessageSquare,
   Mail,
   Clock,
   Star,
@@ -1113,8 +1114,8 @@ export default function AdminPage() {
                 : "bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-amber-50"
             }`}
           >
-            <Calendar className="w-4 h-4 text-amber-500" />
-            <span>👑 VIP Appointments & Tours</span>
+            <MessageSquare className="w-4 h-4 text-amber-500" />
+            <span>📨 Property Enquiries</span>
             <span
               className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
                 mainAdminTab === "vip_appointments"
@@ -1606,19 +1607,19 @@ export default function AdminPage() {
       </>
     ) : mainAdminTab === "vip_appointments" ? (
       <div className="space-y-4 sm:space-y-6">
-        {/* VIP Appointments Header Card */}
+        {/* Enquiries Header Card */}
         <div className="bg-gradient-to-r from-rose-950 via-red-900 to-rose-950 rounded-3xl p-5 sm:p-7 text-white border border-rose-900/30 shadow-lg">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <div className="flex items-center space-x-2 text-amber-300 text-xs font-bold uppercase tracking-widest mb-1.5">
                 <Sparkles className="w-4 h-4 text-amber-400" />
-                <span>Private Client Office • Direct Booking Stream</span>
+                <span>Private Client Desk • Direct Enquiry Stream</span>
               </div>
               <h3 className="text-xl sm:text-2xl font-black text-white">
-                Royal VIP Tour Appointments ({vipBookings.length})
+                Property Enquiries ({vipBookings.length})
               </h3>
               <p className="text-xs sm:text-sm text-rose-200 mt-1 max-w-2xl leading-relaxed">
-                All client viewing appointments are synchronized in PostgreSQL and dispatched instantly to <strong>jayalisting@gmail.com</strong> with direct WhatsApp and Call action buttons.
+                All client property enquiries are synchronized in PostgreSQL and dispatched instantly to <strong>jayalisting@gmail.com</strong> with direct WhatsApp and Call action buttons.
               </p>
             </div>
             <Button
@@ -1628,7 +1629,7 @@ export default function AdminPage() {
               disabled={loadingBookings}
             >
               <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loadingBookings ? "animate-spin" : ""}`} />
-              Refresh Appointments
+              Refresh Enquiries
             </Button>
           </div>
         </div>
@@ -1637,13 +1638,13 @@ export default function AdminPage() {
         {vipBookings.length === 0 && !loadingBookings ? (
           <div className="bg-white dark:bg-gray-900 rounded-3xl p-12 text-center border border-rose-900/15 shadow-sm space-y-3">
             <div className="w-14 h-14 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300/40 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto">
-              <Calendar className="w-7 h-7" />
+              <MessageSquare className="w-7 h-7" />
             </div>
             <h4 className="font-bold text-base text-gray-900 dark:text-white">
-              No VIP Appointments Booked Yet
+              No Property Enquiries Received Yet
             </h4>
             <p className="text-xs text-gray-500 max-w-md mx-auto">
-              When a client schedules an in-person or virtual viewing from any property detail page, their booking record will appear here and trigger an email to <strong>jayalisting@gmail.com</strong>.
+              When a buyer, developer, or broker submits an enquiry from any property detail page, their record will appear here with instant WhatsApp and Call actions.
             </p>
           </div>
         ) : (
@@ -1759,26 +1760,42 @@ export default function AdminPage() {
                       </div>
                     </div>
 
-                    {/* Schedule & Contact Details */}
+                    {/* Category & Contact Details */}
                     <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] uppercase font-bold tracking-wider text-gray-500">
-                          Schedule Preference
+                          Category
                         </span>
-                        <Badge className="bg-rose-950 text-amber-300 font-bold text-[10px]">
-                          {isVirtual ? "Virtual 4K Video Tour" : "In-Person VIP Tour"}
+                        <Badge
+                          className={
+                            b.tour_type === "Buyer"
+                              ? "bg-emerald-600 text-white font-bold text-[10px]"
+                              : b.tour_type === "Developer"
+                              ? "bg-blue-600 text-white font-bold text-[10px]"
+                              : b.tour_type === "Broker"
+                              ? "bg-amber-500 text-slate-950 font-black text-[10px]"
+                              : "bg-rose-950 text-amber-300 font-bold text-[10px]"
+                          }
+                        >
+                          {b.tour_type === "Buyer"
+                            ? "🏷️ Buyer"
+                            : b.tour_type === "Developer"
+                            ? "🏗️ Developer"
+                            : b.tour_type === "Broker"
+                            ? "🤝 Broker"
+                            : (b.tour_type || "Enquiry")}
                         </Badge>
                       </div>
 
                       <div className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-2">
                         <Clock className="w-3.5 h-3.5 text-rose-900" />
-                        <span>📅 {b.tour_date} at ⏰ {b.tour_time}</span>
+                        <span>Received: {b.tour_date} • {b.tour_time}</span>
                       </div>
 
                       {/* Client Contact Links */}
                       <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-gray-200 dark:border-gray-700">
                         <a
-                          href={`https://wa.me/${waPhone}?text=Hello%20${encodeURIComponent(b.client_name || "")},%20this%20is%20the%20Private%20Client%20Office%20at%20JayaListing%20regarding%20your%20VIP%20viewing%20request%20for%20${encodeURIComponent(b.property_title || "")}.`}
+                          href={`https://wa.me/${waPhone}?text=Hello%20${encodeURIComponent(b.client_name || "")},%20thank%20you%20for%20your%20enquiry%20regarding%20${encodeURIComponent(b.property_title || "")}%20on%20JayaListing.`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#25D366] hover:bg-[#20ba59] text-white font-bold text-[11px] transition-colors shadow-xs"

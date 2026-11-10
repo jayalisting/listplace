@@ -64,18 +64,23 @@ export async function sendVipTourNotificationEmail(booking: VipTourBookingData):
     const waPhone = formatPhoneForWhatsApp(booking.clientPhone)
     const propertyUrl = `${SITE_URL}/property/${booking.propertyId}`
     const adminUrl = `${SITE_URL}/admin`
-    const isVirtual = booking.tourType === "virtual"
-    const tourTypeLabel = isVirtual ? "Private 4K Virtual Tour" : "In-Person VIP Tour"
+    const roleLabel = booking.tourType === "virtual" ? "Virtual Tour" : booking.tourType === "in-person" ? "In-Person" : (booking.tourType || "Buyer")
 
-    const subject = `👑 [VIP Tour Booking] ${booking.clientName} requested ${tourTypeLabel} for "${booking.propertyTitle}"`
+    const subject = `👑 [Property Enquiry - ${roleLabel}] ${booking.clientName} for "${booking.propertyTitle}"`
 
     // Plain Text Version (Essential for spam filters & text readers)
     const textBody = `
 ======================================================
-NEW VIP TOUR BOOKING REQUEST - JAYALISTING ROYAL ESTATES
+NEW PROPERTY ENQUIRY - JAYALISTING ROYAL ESTATES
 ======================================================
 
-An exclusive private viewing appointment has been requested.
+An enquiry has been submitted by a visitor.
+
+ENQUIRY DETAILS:
+- Role / Category: ${roleLabel}
+- Client Name: ${booking.clientName}
+- Phone Number: ${booking.clientPhone}
+${booking.clientEmail && !booking.clientEmail.includes("enquiry@") ? `- Email: ${booking.clientEmail}\n` : ""}- Received Date: ${booking.tourDate} at ${booking.tourTime}
 
 ESTATE DETAILS:
 - Title: ${booking.propertyTitle} (ID #${booking.propertyId})
@@ -83,19 +88,8 @@ ESTATE DETAILS:
 - Location: ${booking.propertyLocation || "Prime Location"}
 - View Online: ${propertyUrl}
 
-APPOINTMENT SCHEDULE:
-- Preference: ${tourTypeLabel}
-- Preferred Date: ${booking.tourDate}
-- Preferred Time: ${booking.tourTime}
-
-CLIENT / INVESTOR PROFILE:
-- Full Legal Name / Entity: ${booking.clientName}
-- Phone: ${booking.clientPhone}
-- Email: ${booking.clientEmail}
-${booking.notes ? `- Notes: ${booking.notes}\n` : ""}
-
 DIRECT CONCIERGE ACTIONS:
-- WhatsApp: https://wa.me/${waPhone}?text=Hello%20${encodeURIComponent(booking.clientName)},%20this%20is%20the%20Private%20Client%20Office%20at%20JayaListing%20regarding%20your%20VIP%20viewing%20request%20for%20${encodeURIComponent(booking.propertyTitle)}.
+- WhatsApp: https://wa.me/${waPhone}?text=Hello%20${encodeURIComponent(booking.clientName)},%20this%20is%20the%20Private%20Client%20Office%20at%20JayaListing%20regarding%20your%20enquiry%20for%20${encodeURIComponent(booking.propertyTitle)}.
 - Call Client: tel:${booking.clientPhone.replace(/\s+/g, "")}
 - Admin Dashboard: ${adminUrl}
 

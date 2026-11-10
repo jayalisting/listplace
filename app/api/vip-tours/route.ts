@@ -69,13 +69,14 @@ export async function POST(req: NextRequest) {
     const propertyTitle = String(body.propertyTitle || "Untitled Luxury Estate").trim()
     const propertyPrice = String(body.propertyPrice || "").trim()
     const propertyLocation = String(body.propertyLocation || "").trim()
-    const tourType = body.tourType === "virtual" ? "virtual" : "in-person"
-    const tourDate = String(body.tourDate || "").trim()
-    const tourTime = String(body.tourTime || "").trim()
+    const rawRole = String(body.role || body.tourType || "Buyer").trim()
+    const tourType = ["Buyer", "Developer", "Broker"].includes(rawRole) ? rawRole : "Buyer"
+    const tourDate = String(body.tourDate || new Date().toISOString().split("T")[0]).trim()
+    const tourTime = String(body.tourTime || new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })).trim()
     const clientName = String(body.clientName || "").trim()
     const clientPhone = String(body.clientPhone || "").trim()
     const clientEmail = String(body.clientEmail || "").trim().toLowerCase()
-    const notes = String(body.notes || "").trim()
+    const notes = String(body.notes || `Role: ${tourType}`).trim()
 
     if (!propertyId) {
       return NextResponse.json(
@@ -86,28 +87,14 @@ export async function POST(req: NextRequest) {
 
     if (!clientName || clientName.length < 2) {
       return NextResponse.json(
-        { success: false, error: "Please enter your full legal name or entity." },
+        { success: false, error: "Please enter your name." },
         { status: 400, headers: NO_CACHE_HEADERS }
       )
     }
 
     if (!clientPhone || clientPhone.replace(/\D/g, "").length < 7) {
       return NextResponse.json(
-        { success: false, error: "Please enter a valid contact phone number." },
-        { status: 400, headers: NO_CACHE_HEADERS }
-      )
-    }
-
-    if (!clientEmail || !EMAIL_REGEX.test(clientEmail)) {
-      return NextResponse.json(
-        { success: false, error: "Please enter a valid email address." },
-        { status: 400, headers: NO_CACHE_HEADERS }
-      )
-    }
-
-    if (!tourDate) {
-      return NextResponse.json(
-        { success: false, error: "Please select a preferred viewing date." },
+        { success: false, error: "Please enter a valid phone number." },
         { status: 400, headers: NO_CACHE_HEADERS }
       )
     }
@@ -120,10 +107,10 @@ export async function POST(req: NextRequest) {
       propertyLocation,
       tourType,
       tourDate,
-      tourTime: tourTime || "11:00 AM",
+      tourTime,
       clientName,
       clientPhone,
-      clientEmail,
+      clientEmail: clientEmail || "enquiry@jayalisting.com",
       notes,
     })
 

@@ -1220,17 +1220,19 @@ export async function createDbVipTourBooking(data: {
   propertyTitle: string
   propertyPrice?: string
   propertyLocation?: string
-  tourType: "in-person" | "virtual"
-  tourDate: string
-  tourTime: string
+  tourType?: string
+  tourDate?: string
+  tourTime?: string
   clientName: string
   clientPhone: string
-  clientEmail: string
+  clientEmail?: string
   notes?: string
 }): Promise<VipTourBookingRecord> {
   await initializeDatabase()
   const client = await pool.connect()
   try {
+    const today = new Date().toISOString().split("T")[0]
+    const nowTime = new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })
     const res = await client.query(
       `
       INSERT INTO vip_tour_bookings (
@@ -1245,12 +1247,12 @@ export async function createDbVipTourBooking(data: {
         data.propertyTitle,
         data.propertyPrice || null,
         data.propertyLocation || null,
-        data.tourType || "in-person",
-        data.tourDate,
-        data.tourTime,
+        data.tourType || "Buyer",
+        data.tourDate || today,
+        data.tourTime || nowTime,
         data.clientName,
         data.clientPhone,
-        data.clientEmail,
+        data.clientEmail || "enquiry@jayalisting.com",
         data.notes || null,
       ]
     )

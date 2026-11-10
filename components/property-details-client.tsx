@@ -6,6 +6,7 @@ import {
   Star,
   Phone,
   MessageCircle,
+  MessageSquare,
   Shield,
   School,
   Hospital,
@@ -203,17 +204,9 @@ export default function PropertyDetailsClient({
   const [isSaved, setIsSaved] = useState(false)
   const [showVipModal, setShowVipModal] = useState(false)
   const [showLightbox, setShowLightbox] = useState(false)
-  const [tourType, setTourType] = useState<"in-person" | "virtual">("in-person")
-  const [tourDate, setTourDate] = useState(() => {
-    const d = new Date()
-    d.setDate(d.getDate() + 2)
-    return d.toISOString().split("T")[0]
-  })
-  const [tourTime, setTourTime] = useState("11:00 AM")
+  const [clientRole, setClientRole] = useState<"Buyer" | "Developer" | "Broker">("Buyer")
   const [clientName, setClientName] = useState("")
   const [clientPhone, setClientPhone] = useState("")
-  const [clientEmail, setClientEmail] = useState("")
-  const [bookingNotes, setBookingNotes] = useState("")
   const [bookingReference, setBookingReference] = useState("")
   const [isSubmittingTour, setIsSubmittingTour] = useState(false)
   const [tourError, setTourError] = useState<string | null>(null)
@@ -399,26 +392,24 @@ export default function PropertyDetailsClient({
           propertyTitle: property.title,
           propertyPrice: property.price,
           propertyLocation: `${property.location}, ${property.city}`,
-          tourType,
-          tourDate,
-          tourTime,
+          tourType: clientRole,
+          role: clientRole,
           clientName,
           clientPhone,
-          clientEmail,
-          notes: bookingNotes,
+          notes: `Role: ${clientRole}`,
         }),
       })
 
       const data = await res.json()
       if (!res.ok || !data.success) {
-        throw new Error(data.error || "Failed to schedule appointment")
+        throw new Error(data.error || "Failed to submit enquiry")
       }
 
-      const refCode = `JAYA-VIP-${property.id}-${data.bookingId || Date.now().toString().slice(-4)}`
+      const refCode = `JAYA-${property.id}-${data.bookingId || Date.now().toString().slice(-4)}`
       setBookingReference(refCode)
       setBookingConfirmed(true)
     } catch (err: any) {
-      setTourError(err.message || "Failed to submit booking. Please try again or contact concierge via WhatsApp.")
+      setTourError(err.message || "Failed to submit enquiry. Please try again or contact concierge via WhatsApp.")
     } finally {
       setIsSubmittingTour(false)
     }
@@ -1219,8 +1210,8 @@ export default function PropertyDetailsClient({
                     onClick={() => setShowVipModal(true)}
                     className="w-full h-11 bg-gradient-to-r from-rose-900 via-red-800 to-rose-950 hover:from-rose-950 hover:to-red-950 text-white rounded-xl font-bold text-sm shadow-lg shadow-rose-900/30 border border-amber-400/20"
                   >
-                    <Calendar className="w-4 h-4 mr-2 text-amber-300" />
-                    Book Private VIP Viewing
+                    <MessageSquare className="w-4 h-4 mr-2 text-amber-300" />
+                    Send Enquiry
                   </Button>
 
                   <a
@@ -1428,16 +1419,16 @@ export default function PropertyDetailsClient({
             onClick={() => setShowVipModal(true)}
             className="bg-gradient-to-r from-rose-900 via-red-800 to-rose-950 hover:from-rose-950 text-white rounded-xl text-xs font-bold px-3.5 h-10 shadow-md shadow-rose-900/30 border border-amber-400/20"
           >
-            <Calendar className="w-3.5 h-3.5 mr-1.5 text-amber-300" />
-            Book VIP Tour
+            <MessageSquare className="w-3.5 h-3.5 mr-1.5 text-amber-300" />
+            Enquire Now
           </Button>
         </div>
       </div>
 
-      {/* Modal for VIP Tour Scheduling */}
+      {/* Modal for Property Enquiry */}
       {showVipModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-900 rounded-3xl max-w-lg w-full p-6 sm:p-8 border border-rose-900/40 shadow-2xl relative">
+          <div className="bg-white dark:bg-gray-900 rounded-3xl max-w-md w-full p-6 sm:p-7 border border-rose-900/40 shadow-2xl relative">
             <button
               onClick={() => setShowVipModal(false)}
               className="absolute top-5 right-5 p-2 rounded-full hover:bg-rose-50 dark:hover:bg-gray-800 text-gray-500"
@@ -1451,13 +1442,13 @@ export default function PropertyDetailsClient({
                   <CheckCircle2 className="w-10 h-10" />
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  VIP Appointment Confirmed
+                  Enquiry Received
                 </h3>
                 <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 leading-relaxed max-w-sm mx-auto">
-                  Your request has been delivered to the Private Client Desk at <strong>jayalisting@gmail.com</strong>. Our executive concierge will reach out via WhatsApp/Call to confirm security escort details.
+                  Thank you, <strong>{clientName}</strong>. Our team will contact you directly on <strong>{clientPhone}</strong> via WhatsApp or phone call shortly.
                 </p>
                 <div className="p-3 bg-rose-50 dark:bg-rose-950/40 rounded-xl text-xs font-semibold text-rose-900 dark:text-rose-300 border border-rose-900/20">
-                  Reference: {bookingReference || `JAYA-ROYAL-${property.id}-2026`}
+                  Property Ref: #{property.id} • {clientRole} Enquiry
                 </div>
                 <div className="pt-2">
                   <Button
@@ -1465,6 +1456,8 @@ export default function PropertyDetailsClient({
                     onClick={() => {
                       setShowVipModal(false)
                       setBookingConfirmed(false)
+                      setClientName("")
+                      setClientPhone("")
                     }}
                     className="h-10 px-6 rounded-xl bg-rose-900 hover:bg-rose-950 text-white text-xs font-bold"
                   >
@@ -1476,13 +1469,13 @@ export default function PropertyDetailsClient({
               <div>
                 <div className="flex items-center space-x-2 text-rose-900 dark:text-rose-400 text-xs font-bold uppercase tracking-wider mb-2">
                   <Sparkles className="w-4 h-4 text-amber-500" />
-                  Royal Private Appointment
+                  Direct Enquiry
                 </div>
                 <h3 className="text-2xl font-black text-gray-900 dark:text-white">
-                  Schedule Private Viewing
+                  Property Enquiry
                 </h3>
                 <p className="text-xs text-gray-500 mt-1 mb-5">
-                  Exclusive appointment for {property.title} ({property.price})
+                  {property.title} • {property.price}
                 </p>
 
                 {tourError && (
@@ -1502,139 +1495,73 @@ export default function PropertyDetailsClient({
                     style={{ position: "absolute", left: "-9999px", opacity: 0, height: 0 }}
                   />
 
+                  {/* Are you a: Buyer / Developer / Broker */}
+                  <div>
+                    <label className="text-xs font-bold text-gray-700 dark:text-gray-300 block mb-2">
+                      Are you a:
+                    </label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {(["Buyer", "Developer", "Broker"] as const).map((role) => (
+                        <button
+                          key={role}
+                          type="button"
+                          onClick={() => setClientRole(role)}
+                          className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all text-center ${
+                            clientRole === role
+                              ? "border-rose-900 bg-rose-900 text-white shadow-sm"
+                              : "border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                          }`}
+                        >
+                          {role === "Buyer" ? "🏷️ Buyer" : role === "Developer" ? "🏗️ Developer" : "🤝 Broker"}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Name Input */}
                   <div>
                     <label className="text-xs font-bold text-gray-700 dark:text-gray-300 block mb-1">
-                      Viewing Preference
-                    </label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setTourType("in-person")}
-                        className={`py-2.5 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center space-x-1.5 transition-all ${
-                          tourType === "in-person"
-                            ? "border-rose-900 bg-rose-900/10 text-rose-900 dark:text-rose-300 font-bold"
-                            : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400"
-                        }`}
-                      >
-                        <Compass className="w-4 h-4" />
-                        <span>In-Person VIP Tour</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setTourType("virtual")}
-                        className={`py-2.5 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center space-x-1.5 transition-all ${
-                          tourType === "virtual"
-                            ? "border-rose-900 bg-rose-900/10 text-rose-900 dark:text-rose-300 font-bold"
-                            : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400"
-                        }`}
-                      >
-                        <Eye className="w-4 h-4" />
-                        <span>Private 4K Video Tour</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 block mb-1">
-                        Preferred Date
-                      </label>
-                      <input
-                        type="date"
-                        value={tourDate}
-                        onChange={(e) => setTourDate(e.target.value)}
-                        className="w-full h-10 px-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-slate-50 dark:bg-gray-800 text-xs focus:ring-1 focus:ring-rose-800"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 block mb-1">
-                        Preferred Time
-                      </label>
-                      <select
-                        value={tourTime}
-                        onChange={(e) => setTourTime(e.target.value)}
-                        className="w-full h-10 px-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-slate-50 dark:bg-gray-800 text-xs focus:ring-1 focus:ring-rose-800"
-                      >
-                        <option>10:00 AM</option>
-                        <option>11:30 AM</option>
-                        <option>02:00 PM</option>
-                        <option>04:30 PM (Sunset)</option>
-                        <option>06:00 PM</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 block mb-1">
-                      Full Legal Name / Entity
+                      Your Name
                     </label>
                     <input
                       type="text"
-                      placeholder="e.g. Mr. Rajesh Adani or Family Office"
+                      placeholder="Enter your full name"
                       value={clientName}
                       onChange={(e) => setClientName(e.target.value)}
                       required
-                      className="w-full h-10 px-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-slate-50 dark:bg-gray-800 text-xs focus:ring-1 focus:ring-rose-800"
+                      className="w-full h-11 px-3.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-slate-50 dark:bg-gray-800 text-sm focus:ring-2 focus:ring-rose-800 focus:outline-none"
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 block mb-1">
-                        Private Phone
-                      </label>
-                      <input
-                        type="tel"
-                        placeholder="+91 98..."
-                        value={clientPhone}
-                        onChange={(e) => setClientPhone(e.target.value)}
-                        required
-                        className="w-full h-10 px-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-slate-50 dark:bg-gray-800 text-xs focus:ring-1 focus:ring-rose-800"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 block mb-1">
-                        Email Address
-                      </label>
-                      <input
-                        type="email"
-                        placeholder="vip@domain.com"
-                        value={clientEmail}
-                        onChange={(e) => setClientEmail(e.target.value)}
-                        required
-                        className="w-full h-10 px-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-slate-50 dark:bg-gray-800 text-xs focus:ring-1 focus:ring-rose-800"
-                      />
-                    </div>
-                  </div>
-
+                  {/* Phone Number Input */}
                   <div>
-                    <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 block mb-1">
-                      Special Requirements / Security Notes (Optional)
+                    <label className="text-xs font-bold text-gray-700 dark:text-gray-300 block mb-1">
+                      Phone Number
                     </label>
-                    <textarea
-                      rows={2}
-                      placeholder="e.g. Helipad landing clearance, NDAs required, family office principal attending..."
-                      value={bookingNotes}
-                      onChange={(e) => setBookingNotes(e.target.value)}
-                      className="w-full p-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-slate-50 dark:bg-gray-800 text-xs focus:ring-1 focus:ring-rose-800"
+                    <input
+                      type="tel"
+                      placeholder="+91 98765 43210"
+                      value={clientPhone}
+                      onChange={(e) => setClientPhone(e.target.value)}
+                      required
+                      className="w-full h-11 px-3.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-slate-50 dark:bg-gray-800 text-sm focus:ring-2 focus:ring-rose-800 focus:outline-none"
                     />
                   </div>
 
                   <Button
                     type="submit"
                     disabled={isSubmittingTour}
-                    className="w-full h-11 bg-gradient-to-r from-rose-900 via-red-800 to-rose-950 hover:from-rose-950 text-white rounded-xl font-bold text-xs shadow-lg shadow-rose-900/30 mt-2 border border-amber-400/20 disabled:opacity-60 flex items-center justify-center gap-2"
+                    className="w-full h-11 bg-gradient-to-r from-rose-900 via-red-800 to-rose-950 hover:from-rose-950 text-white rounded-xl font-bold text-sm shadow-lg shadow-rose-900/30 mt-2 border border-amber-400/20 disabled:opacity-60 flex items-center justify-center gap-2"
                   >
                     {isSubmittingTour ? (
                       <>
                         <RefreshCw className="w-4 h-4 animate-spin text-amber-300" />
-                        <span>Transmitting to VIP Concierge Desk...</span>
+                        <span>Sending Enquiry...</span>
                       </>
                     ) : (
                       <>
-                        <Calendar className="w-4 h-4 text-amber-300" />
-                        <span>Confirm Private VIP Appointment</span>
+                        <MessageSquare className="w-4 h-4 text-amber-300" />
+                        <span>Submit Enquiry</span>
                       </>
                     )}
                   </Button>
