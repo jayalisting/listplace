@@ -249,18 +249,17 @@ export default function HomePage() {
           </div>
         </header>
 
-        {/* Clean, Modern, Short Hero Section */}
-        <section className="relative bg-gradient-to-b from-stone-950 via-rose-950 to-slate-950 text-white py-8 sm:py-14 px-4 border-b border-rose-900/20">
-          <div className="container mx-auto max-w-4xl text-center space-y-2 sm:space-y-3">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-900/50 border border-amber-400/30 text-amber-300 text-[10px] sm:text-xs font-bold uppercase tracking-wider">
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              Verified Properties & Land
-            </span>
-            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white drop-shadow-sm">
-              Find Your Next Property
+        {/* Short & Sweet Hero Section */}
+        <section className="relative bg-gradient-to-b from-stone-950 via-rose-950 to-slate-950 text-white py-6 sm:py-9 px-4 border-b border-rose-900/20">
+          <div className="container mx-auto max-w-3xl text-center space-y-1.5 sm:space-y-2">
+            <h1 className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tight text-white">
+              JayaListing
+              <span className="block text-amber-300 text-lg sm:text-2xl md:text-3xl font-extrabold mt-1">
+                #1 Properties for Top People
+              </span>
             </h1>
-            <p className="text-xs sm:text-sm text-stone-300 max-w-xl mx-auto">
-              Select your location and property type to view verified residential, commercial, industrial, and agricultural opportunities.
+            <p className="text-xs sm:text-sm text-stone-300 max-w-md mx-auto">
+              Verified residential, commercial, industrial & agricultural properties.
             </p>
 
             {/* Simple Integrated Search & Filter Card */}
