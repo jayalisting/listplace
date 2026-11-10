@@ -8,7 +8,7 @@ async function run() {
 
   // Test 1: Admin Auth Performance & Verification
   console.log("--- Test 1: Admin Auth (PBKDF2 Login + HMAC Sub-millisecond Verification) ---")
-  const testPin = "jayaadmin" // Default dev pin
+  const testPin = "Mave@123" // Updated admin password
   const isAuthValid = verifyAdminPassword(testPin)
   console.log(`Password verification for test admin credential: ${isAuthValid}`)
 

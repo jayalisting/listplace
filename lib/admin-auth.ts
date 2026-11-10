@@ -5,7 +5,7 @@ const SALT = process.env.ADMIN_PASSWORD_SALT || "grolow_jaya_luxury_2026"
 // Salted SHA-256 hash
 const STORED_HASH =
   process.env.ADMIN_PASSWORD_HASH ||
-  "e6bf92fba5a7991a2e2cb9ae080e740131649c197268f8d8eb4ec1077d20e41f"
+  "1c69157757df9302d329b873ad599b6fc17a955865604a7924913358f232f3a2"
 
 // PBKDF2 key derivation parameters (standard 100,000 iterations for secure brute-force defense)
 const PBKDF2_ITERATIONS = 100000
